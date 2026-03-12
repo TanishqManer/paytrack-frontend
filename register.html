@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Register | PayTrack</title>
+
+  <link rel="stylesheet" href="css/main.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+
+  <style>
+    /* =====================
+       PAGE LAYOUT
+       ===================== */
+    body {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background: var(--bg-base);
+      overflow: hidden;
+    }
+
+    /* =====================
+       LEFT PANEL — Branding
+       ===================== */
+    .auth-left {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 48px;
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .auth-left::before {
+      content: '';
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 70%);
+      top: -150px;
+      right: -150px;
+      animation: floatOrb 9s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .auth-left::after {
+      content: '';
+      position: absolute;
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(139,92,246,0.12) 0%, transparent 70%);
+      bottom: -80px;
+      left: -60px;
+      animation: floatOrb 11s ease-in-out infinite reverse;
+      pointer-events: none;
+    }
+
+    @keyframes floatOrb {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33%       { transform: translate(-25px, 20px) scale(1.05); }
+      66%       { transform: translate(20px, -25px) scale(0.95); }
+    }
+
+    .brand-logo {
+      font-family: var(--font-display);
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--accent-light);
+      letter-spacing: -0.02em;
+      position: relative;
+      z-index: 1;
+    }
+
+    .brand-center {
+      position: relative;
+      z-index: 1;
+    }
+
+    .brand-center h2 {
+      font-family: var(--font-display);
+      font-size: 38px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, var(--text-primary) 40%, var(--accent-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .brand-center p {
+      color: var(--text-secondary);
+      font-size: 15px;
+      line-height: 1.7;
+      max-width: 360px;
+      margin-bottom: 36px;
+    }
+
+    /* Feature checklist */
+    .feature-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      animation: fadeUp 0.6s cubic-bezier(0.4,0,0.2,1) both;
+    }
+
+    .feature-item:nth-child(1) { animation-delay: 0.1s; }
+    .feature-item:nth-child(2) { animation-delay: 0.2s; }
+    .feature-item:nth-child(3) { animation-delay: 0.3s; }
+    .feature-item:nth-child(4) { animation-delay: 0.4s; }
+
+    .feature-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: var(--radius-md);
+      background: var(--accent-dim);
+      border: 1px solid rgba(99,102,241,0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .feature-text strong {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+    }
+
+    .feature-text span {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Bottom badge */
+    .free-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--success-dim);
+      border: 1px solid rgba(16,185,129,0.2);
+      border-radius: var(--radius-full);
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--success);
+      position: relative;
+      z-index: 1;
+    }
+
+    /* =====================
+       RIGHT PANEL — Form
+       ===================== */
+    .auth-right {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px;
+      overflow-y: auto;
+    }
+
+    .register-card {
+      width: 100%;
+      max-width: 420px;
+      animation: fadeUp 0.6s cubic-bezier(0.4,0,0.2,1) both;
+    }
+
+    /* Header */
+    .register-card-header {
+      margin-bottom: 32px;
+    }
+
+    .register-card-header h1 {
+      font-family: var(--font-display);
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .register-card-header p {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    /* Form groups */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+
+    .input-wrap input {
+      width: 100%;
+      padding: 13px 16px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-size: 14px;
+      transition: var(--transition);
+      outline: none;
+    }
+
+    .input-wrap input:focus {
+      border-color: var(--accent);
+      background: var(--bg-card);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+
+    .input-wrap input::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* Two-col grid for name + email */
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    /* Password strength indicator */
+    .password-strength {
+      display: flex;
+      gap: 4px;
+      margin-top: 8px;
+    }
+
+    .strength-bar {
+      height: 3px;
+      flex: 1;
+      border-radius: 2px;
+      background: var(--bg-elevated);
+      transition: var(--transition);
+    }
+
+    .strength-bar.weak   { background: var(--danger); }
+    .strength-bar.medium { background: var(--warning); }
+    .strength-bar.strong { background: var(--success); }
+
+    .strength-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 5px;
+      text-align: right;
+      min-height: 14px;
+      transition: var(--transition);
+    }
+
+    /* Submit button */
+    .register-btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      transition: var(--transition);
+      margin-top: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .register-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+      opacity: 0;
+      transition: var(--transition);
+    }
+
+    .register-btn:hover {
+      background: var(--accent-light);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px var(--accent-glow);
+    }
+
+    .register-btn:hover::after { opacity: 1; }
+    .register-btn:active { transform: translateY(0); }
+
+    .register-btn.loading {
+      opacity: 0.7;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* Terms note */
+    .terms-note {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 14px;
+      line-height: 1.6;
+    }
+
+    /* Error message */
+    .error-msg {
+      background: var(--danger-dim);
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #fca5a5;
+      margin-bottom: 16px;
+      display: none;
+      animation: fadeUp 0.3s ease both;
+    }
+
+    .error-msg.show { display: block; }
+
+    /* Footer link */
+    .auth-footer-text {
+      margin-top: 28px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .auth-footer-text a {
+      color: var(--accent-light);
+      font-weight: 600;
+      transition: var(--transition);
+    }
+
+    .auth-footer-text a:hover {
+      color: var(--text-primary);
+    }
+
+    /* =====================
+       RESPONSIVE
+       ===================== */
+    @media (max-width: 900px) {
+      body {
+        grid-template-columns: 1fr;
+        overflow: auto;
+      }
+
+      .auth-left { display: none; }
+
+      .auth-right {
+        min-height: 100vh;
+        padding: 32px 24px;
+        align-items: flex-start;
+        padding-top: 48px;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LEFT PANEL -->
+  <div class="auth-left">
+    <div class="brand-logo">PayTrack</div>
+
+    <div class="brand-center">
+      <h2>Start billing<br>smarter today.</h2>
+      <p>Join hundreds of freelancers and small businesses who trust PayTrack to manage invoices and get paid faster.</p>
+
+      <div class="feature-list">
+        <div class="feature-item">
+          <div class="feature-icon">📄</div>
+          <div class="feature-text">
+            <strong>Professional Invoices</strong>
+            <span>Generate branded PDFs in seconds</span>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">💳</div>
+          <div class="feature-text">
+            <strong>Payment Tracking</strong>
+            <span>Cash, UPI, Bank — all in one place</span>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">👥</div>
+          <div class="feature-text">
+            <strong>Client Management</strong>
+            <span>Organize clients and billing history</span>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">📊</div>
+          <div class="feature-text">
+            <strong>Business Insights</strong>
+            <span>Track revenue and pending amounts</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="free-badge">
+      ✦ Free forever — no credit card required
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="auth-right">
+    <div class="register-card">
+
+      <div class="register-card-header">
+        <h1>Create account 🚀</h1>
+        <p>Start managing invoices with PayTrack for free</p>
+      </div>
+
+      <div class="error-msg" id="errorMsg"></div>
+
+      <form id="registerForm" autocomplete="off">
+
+        <div class="form-group">
+          <label>Full Name</label>
+          <div class="input-wrap">
+            <input
+              type="text"
+              id="name"
+              placeholder="John Doe"
+              required
+              autocomplete="name"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Email address</label>
+          <div class="input-wrap">
+            <input
+              type="email"
+              id="email"
+              placeholder="you@example.com"
+              required
+              autocomplete="email"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Password</label>
+          <div class="input-wrap">
+            <input
+              type="password"
+              id="password"
+              placeholder="Create a strong password"
+              required
+              autocomplete="new-password"
+            />
+          </div>
+          <div class="password-strength" id="strengthBars">
+            <div class="strength-bar" id="bar1"></div>
+            <div class="strength-bar" id="bar2"></div>
+            <div class="strength-bar" id="bar3"></div>
+            <div class="strength-bar" id="bar4"></div>
+          </div>
+          <div class="strength-label" id="strengthLabel"></div>
+        </div>
+
+        <div class="form-group">
+          <label>Confirm Password</label>
+          <div class="input-wrap">
+            <input
+              type="password"
+              id="confirmPassword"
+              placeholder="••••••••"
+              required
+              autocomplete="new-password"
+            />
+          </div>
+        </div>
+
+        <button type="submit" class="register-btn" id="registerBtn">
+          Create Account
+        </button>
+
+        <p class="terms-note">
+          By creating an account you agree to our Terms of Service and Privacy Policy.
+        </p>
+      </form>
+
+      <div class="auth-footer-text">
+        Already have an account? <a href="login.html">Sign in</a>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    /* ---- Password Strength ---- */
+    const passwordInput = document.getElementById("password");
+    const bars = [
+      document.getElementById("bar1"),
+      document.getElementById("bar2"),
+      document.getElementById("bar3"),
+      document.getElementById("bar4"),
+    ];
+    const strengthLabel = document.getElementById("strengthLabel");
+
+    function getStrength(val) {
+      let score = 0;
+      if (val.length >= 8)              score++;
+      if (/[A-Z]/.test(val))            score++;
+      if (/[0-9]/.test(val))            score++;
+      if (/[^A-Za-z0-9]/.test(val))    score++;
+      return score;
+    }
+
+    passwordInput.addEventListener("input", () => {
+      const val = passwordInput.value;
+      const score = getStrength(val);
+
+      const levels = ["", "weak", "weak", "medium", "strong"];
+      const labels = ["", "Weak", "Fair", "Good", "Strong"];
+      const colors = ["", "var(--danger)", "var(--warning)", "var(--warning)", "var(--success)"];
+
+      bars.forEach((bar, i) => {
+        bar.className = "strength-bar";
+        if (val.length > 0 && i < score) {
+          bar.classList.add(levels[score]);
+        }
+      });
+
+      strengthLabel.textContent = val.length > 0 ? labels[score] : "";
+      strengthLabel.style.color = val.length > 0 ? colors[score] : "";
+    });
+
+    /* ---- Register Form ---- */
+    const form       = document.getElementById("registerForm");
+    const registerBtn = document.getElementById("registerBtn");
+    const errorMsg   = document.getElementById("errorMsg");
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+
+      const name            = document.getElementById("name").value.trim();
+      const email           = document.getElementById("email").value.trim();
+      const password        = document.getElementById("password").value.trim();
+      const confirmPassword = document.getElementById("confirmPassword").value.trim();
+
+      errorMsg.classList.remove("show");
+
+      if (!name || !email || !password || !confirmPassword) {
+        errorMsg.textContent = "Please fill in all fields.";
+        errorMsg.classList.add("show");
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        errorMsg.textContent = "Passwords do not match.";
+        errorMsg.classList.add("show");
+        return;
+      }
+
+      if (password.length < 6) {
+        errorMsg.textContent = "Password must be at least 6 characters.";
+        errorMsg.classList.add("show");
+        return;
+      }
+
+      // Loading state
+      registerBtn.textContent = "Creating account...";
+      registerBtn.classList.add("loading");
+
+      setTimeout(() => {
+        // Backend integration placeholder
+        console.log("REGISTER DATA", { name, email, password });
+
+        localStorage.setItem("paytrack_token", "dummy-jwt-token");
+        localStorage.setItem("paytrack_user", email);
+
+        window.location.href = "dashboard-v2.html";
+      }, 800);
+    });
+  </script>
+
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+</body>
+</html>

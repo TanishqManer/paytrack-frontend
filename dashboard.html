@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard | PayTrack</title>
+
+    <!-- Global CSS -->
+    <link rel="stylesheet" href="css/main.css" />
+    <!-- Dashboard CSS -->
+    <link rel="stylesheet" href="css/dashboard.css" />
+
+    <!-- Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">PayTrack</div>
+
+        <nav class="sidebar-menu">
+            <a href="#" class="active">Dashboard</a>
+            <a href="#">Invoices</a>
+            <a href="#">Clients</a>
+            <a href="#">Payments</a>
+            <a href="#">Settings</a>
+        </nav>
+
+        <button id="logoutBtn" class="logout-btn">Logout</button>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+        <!-- TOP BAR -->
+        <header class="topbar">
+            <h2>Dashboard</h2>
+            <span class="plan-badge">FREE PLAN</span>
+        </header>
+
+        <!-- STATS -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <h3>Invoices</h3>
+                <p>12</p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Revenue</h3>
+                <p>₹45,000</p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Clients</h3>
+                <p>6</p>
+            </div>
+        </section>
+
+        <!-- RECENT ACTIVITY -->
+        <section class="recent-section">
+            <h3>Recent Activity</h3>
+            <div class="recent-card">
+                <p>Invoice #INV-1021 created</p>
+                <span>2 hours ago</span>
+            </div>
+            <div class="recent-card">
+                <p>Payment received from Client A</p>
+                <span>Yesterday</span>
+            </div>
+        </section>
+    </main>
+
+    <!-- Dashboard Logic -->
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

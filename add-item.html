@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Add Item | PayTrack</title>
+
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/add-item.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- TOP NAV -->
+  <header class="top-nav">
+    <span class="logo">PayTrack</span>
+    <div class="nav-right">
+      <button class="btn-secondary" onclick="history.back()">← Back</button>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="page">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+      <h1>Add Item</h1>
+      <p class="muted">Create products or services to reuse quickly in invoices</p>
+    </div>
+
+    <!-- TWO-COLUMN GRID -->
+    <div class="page-grid">
+
+      <!-- LEFT: FORM -->
+      <div class="form-card">
+
+        <div class="form-card-header">
+          <div class="form-card-icon">➕</div>
+          <h2>New Item</h2>
+        </div>
+
+        <form id="addItemForm">
+
+          <!-- ITEM NAME -->
+          <div class="form-group">
+            <label>Item Name *</label>
+            <input
+              type="text"
+              id="itemName"
+              placeholder="e.g. Website Development"
+              required
+            />
+          </div>
+
+          <!-- DESCRIPTION -->
+          <div class="form-group">
+            <label>Description</label>
+            <textarea
+              id="itemDescription"
+              placeholder="Short description of the item or service…"
+            ></textarea>
+          </div>
+
+          <!-- PRICE -->
+          <div class="form-group">
+            <label>Price (₹) *</label>
+            <input
+              type="number"
+              id="itemPrice"
+              placeholder="e.g. 5000"
+              required
+            />
+          </div>
+
+          <!-- IMAGE -->
+          <div class="form-group">
+            <label>Item Image</label>
+
+            <input
+              type="file"
+              id="itemImageFile"
+              accept="image/*"
+              style="
+                padding: 10px 14px;
+                background: var(--bg-elevated);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-md);
+                color: var(--text-secondary);
+                font-size: 13px;
+                cursor: pointer;
+                margin-bottom: 0;
+              "
+            />
+
+            <div class="or-divider">
+              <span>or paste URL</span>
+            </div>
+
+            <input
+              type="url"
+              id="itemImageUrl"
+              placeholder="https://example.com/image.png"
+            />
+
+            <a
+              href="https://www.google.com/imghp"
+              target="_blank"
+              class="link"
+            >
+              🔍 Open Google Images →
+            </a>
+          </div>
+
+          <!-- ACTIONS -->
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Item</button>
+            <button type="reset" class="btn-secondary">Reset</button>
+          </div>
+
+        </form>
+      </div>
+
+      <!-- RIGHT: ITEMS LIST -->
+      <div class="items-panel">
+
+        <div class="items-panel-header">
+          <h2>Your Items</h2>
+          <span class="items-count" id="itemsCount">0 items</span>
+        </div>
+
+        <div id="itemsList" class="items-list">
+          <div class="empty-state">
+            <div class="empty-state-icon">📦</div>
+            <p>No items yet.<br>Add your first product or service above.</p>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <script src="js/add-item.js"></script>
+  <script>
+    /* ---- Enhance the render to use new card design & count ---- */
+    const _originalRender = window.renderItems;
+
+    function updateItemsCount() {
+      const countEl = document.getElementById("itemsCount");
+      const items = JSON.parse(localStorage.getItem("paytrack_items") || "[]");
+      if (countEl) {
+        countEl.textContent = `${items.length} item${items.length !== 1 ? "s" : ""}`;
+      }
+    }
+
+    /* Patch renderItems to also update count & use new card design */
+    const itemsListEl = document.getElementById("itemsList");
+    const originalObserver = new MutationObserver(() => {
+      updateItemsCount();
+
+      /* Re-style injected item cards to match new design */
+      document.querySelectorAll(".item-card .item-actions button").forEach(btn => {
+        btn.classList.add("btn-delete");
+        btn.classList.remove("btn-secondary");
+        btn.innerHTML = "🗑 Delete";
+      });
+    });
+
+    if (itemsListEl) {
+      originalObserver.observe(itemsListEl, { childList: true, subtree: true });
+    }
+
+    /* Initial count */
+    updateItemsCount();
+
+    /* Show toast on item save */
+    const addForm = document.getElementById("addItemForm");
+    if (addForm) {
+      addForm.addEventListener("submit", () => {
+        setTimeout(() => {
+          showToast("Item saved successfully ✓");
+          updateItemsCount();
+        }, 100);
+      });
+    }
+
+    function showToast(msg) {
+      const t = document.createElement("div");
+      t.className = "toast";
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 2500);
+    }
+  </script>
+</body>
+</html>

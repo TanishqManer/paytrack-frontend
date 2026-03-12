@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Create Invoice | PayTrack</title>
+
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/create-invoice-v2.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <header class="top-nav">
+    <span class="logo">PayTrack</span>
+    <button class="btn-secondary" onclick="history.back()">← Back</button>
+  </header>
+
+  <!-- MAIN -->
+  <main class="invoice-container">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+      <h1>Create Invoice</h1>
+      <p class="subtitle">Generate a professional invoice in seconds</p>
+    </div>
+
+    <!-- CLIENT DETAILS -->
+    <section class="card">
+      <div class="card-header">
+        <div class="card-icon">👤</div>
+        <h3>Client Details</h3>
+      </div>
+      <div class="grid">
+        <input type="text"  placeholder="Client Name *"    id="clientName"    />
+        <input type="email" placeholder="Client Email"     id="clientEmail"   />
+        <input type="text"  placeholder="Client Address"   id="clientAddress" />
+      </div>
+    </section>
+
+    <!-- INVOICE LAYOUT -->
+    <div class="invoice-layout">
+
+      <!-- PRODUCT CATALOG -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-icon">🛍️</div>
+          <h3>Products</h3>
+        </div>
+
+        <div class="product-catalog-header">
+          <p class="subtitle" style="margin:0;">Select items to add to the invoice</p>
+          <span class="product-count" id="productCount">0 products</span>
+        </div>
+
+        <div id="productGrid" class="product-grid">
+          <div class="empty-catalog">
+            <div class="empty-catalog-icon">🛍️</div>
+            <p>No products found.<br>Add items first from the Items page.</p>
+            <button class="btn-secondary" onclick="window.location.href='add-item.html'">
+              + Add Items
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- CART PANEL -->
+      <div class="cart-panel">
+
+        <div class="cart-header">
+          <h3>
+            🛒 Invoice Cart
+            <span class="cart-badge" id="cartBadge">0</span>
+          </h3>
+        </div>
+
+        <!-- Cart items injected by JS -->
+        <div id="invoiceCart">
+          <div class="cart-empty">
+            <div class="cart-empty-icon">🛒</div>
+            No items added yet
+          </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="cart-summary" id="cartSummary">
+          <div class="summary-row">
+            <span>Subtotal</span>
+            <span id="subtotalDisplay">₹0</span>
+          </div>
+          <div class="summary-row" id="gstRow">
+            <span>GST (0%)</span>
+            <span id="gstDisplay">₹0</span>
+          </div>
+          <div class="summary-row">
+            <span>Total</span>
+            <span id="totalDisplay">₹0</span>
+          </div>
+        </div>
+
+        <!-- Hidden legacy total element for JS compat -->
+        <span id="totalAmount" style="display:none;"></span>
+
+        <button class="btn-create-invoice" id="createInvoiceBtn">
+          ✦ Create Invoice
+        </button>
+
+      </div>
+    </div>
+
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/create-invoice-v2.js"></script>
+
+  <script>
+    /* ============================================================
+       UI ENHANCEMENTS — layered on top of create-invoice-v2.js
+       All core logic stays in the original JS file.
+       ============================================================ */
+
+    document.addEventListener("DOMContentLoaded", () => {
+
+      /* ---- Patch product grid to use new card styles ---- */
+      const productGrid = document.getElementById("productGrid");
+      const productCount = document.getElementById("productCount");
+
+      if (productGrid) {
+        const gridObserver = new MutationObserver(() => {
+          /* Style injected product cards */
+          productGrid.querySelectorAll(".product-card .product-actions button").forEach(btn => {
+            btn.classList.add("btn-add-cart");
+            btn.classList.remove("btn-secondary");
+            btn.innerHTML = "+ Add to Cart";
+          });
+
+          /* Update product count */
+          const cards = productGrid.querySelectorAll(".product-card");
+          if (productCount) {
+            productCount.textContent = `${cards.length} product${cards.length !== 1 ? "s" : ""}`;
+          }
+        });
+
+        gridObserver.observe(productGrid, { childList: true, subtree: true });
+      }
+
+      /* ---- Patch cart to use new item styles & update badge ---- */
+      const cartEl    = document.getElementById("invoiceCart");
+      const cartBadge = document.getElementById("cartBadge");
+      const subtotalDisplay = document.getElementById("subtotalDisplay");
+      const gstDisplay      = document.getElementById("gstDisplay");
+      const totalDisplay    = document.getElementById("totalDisplay");
+      const gstRow          = document.getElementById("gstRow");
+      const totalAmountEl   = document.getElementById("totalAmount");
+
+      if (cartEl) {
+        const cartObserver = new MutationObserver(() => {
+          /* Style qty buttons */
+          cartEl.querySelectorAll(".cart-qty button").forEach(btn => {
+            btn.classList.add("qty-btn");
+          });
+
+          /* Badge count */
+          const itemCount = cartEl.querySelectorAll(".cart-item").length;
+          if (cartBadge) cartBadge.textContent = itemCount;
+
+          /* Sync summary from totalAmount hidden span */
+          setTimeout(() => {
+            if (!totalAmountEl) return;
+            const raw = totalAmountEl.textContent.replace(/[₹$€,]/g, "").trim();
+            const total = parseFloat(raw) || 0;
+
+            const settings = JSON.parse(localStorage.getItem("paytrack_settings") || "{}");
+            const gstPct   = settings.invoice?.gstPercent || 0;
+            const currency = settings.invoice?.currency || "₹";
+            const subtotal = gstPct > 0 ? total / (1 + gstPct / 100) : total;
+            const gstAmt   = total - subtotal;
+
+            if (subtotalDisplay) subtotalDisplay.textContent = `${currency}${subtotal.toFixed(2)}`;
+            if (gstDisplay)      gstDisplay.textContent      = `${currency}${gstAmt.toFixed(2)}`;
+            if (totalDisplay)    totalDisplay.textContent     = `${currency}${total.toFixed(2)}`;
+            if (gstRow) {
+              const gstLabel = gstRow.querySelector("span");
+              if (gstLabel) gstLabel.textContent = `GST (${gstPct}%)`;
+            }
+          }, 50);
+        });
+
+        cartObserver.observe(cartEl, { childList: true, subtree: true, characterData: true });
+      }
+
+      /* ---- Watch totalAmount for changes to update summary ---- */
+      if (totalAmountEl) {
+        const totalObserver = new MutationObserver(() => {
+          const raw      = totalAmountEl.textContent.replace(/[₹$€,]/g, "").trim();
+          const total    = parseFloat(raw) || 0;
+          const settings = JSON.parse(localStorage.getItem("paytrack_settings") || "{}");
+          const gstPct   = settings.invoice?.gstPercent || 0;
+          const currency = settings.invoice?.currency || "₹";
+          const subtotal = gstPct > 0 ? total / (1 + gstPct / 100) : total;
+          const gstAmt   = total - subtotal;
+
+          if (subtotalDisplay) subtotalDisplay.textContent = `${currency}${subtotal.toFixed(2)}`;
+          if (gstDisplay)      gstDisplay.textContent      = `${currency}${gstAmt.toFixed(2)}`;
+          if (totalDisplay)    totalDisplay.textContent     = `${currency}${total.toFixed(2)}`;
+        });
+
+        totalObserver.observe(totalAmountEl, { childList: true, subtree: true, characterData: true });
+      }
+    });
+  </script>
+
+</body>
+</html>

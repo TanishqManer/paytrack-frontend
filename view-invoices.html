@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Invoices | PayTrack</title>
+
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/view-invoices.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- TOP NAV -->
+  <header class="top-nav">
+    <span class="logo">PayTrack</span>
+    <div style="display:flex; gap:10px;">
+      <button class="btn-small primary" onclick="window.location.href='create-invoice-v2.html'">
+        + New Invoice
+      </button>
+      <button class="btn-small" onclick="history.back()">← Back</button>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="page">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+      <div>
+        <h1>All Invoices</h1>
+        <p class="muted">Manage, update, and track all your invoices</p>
+      </div>
+      <span class="invoice-count-badge" id="invoiceCountBadge">
+        0 invoices
+      </span>
+    </div>
+
+    <!-- FILTER BAR -->
+    <div class="filter-bar">
+      <div class="filter-search">
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="Search by invoice ID or client name…"
+        />
+      </div>
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="pending">Pending</button>
+      <button class="filter-btn" data-filter="paid">Paid</button>
+    </div>
+
+    <!-- TABLE HEADER -->
+    <div class="invoice-table-header">
+      <span>Invoice ID</span>
+      <span>Client</span>
+      <span>Amount</span>
+      <span>Status</span>
+      <span>Payment</span>
+      <span>Actions</span>
+    </div>
+
+    <!-- INVOICE LIST -->
+    <div id="invoiceList"></div>
+
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/view-invoices.js"></script>
+
+  <script>
+    /* ============================================================
+       UI ENHANCEMENTS for view-invoices
+       Layered on top of view-invoices.js — no core logic changed
+       ============================================================ */
+
+    document.addEventListener("DOMContentLoaded", () => {
+
+      /* ---- Invoice count badge ---- */
+      function updateCountBadge(count) {
+        const badge = document.getElementById("invoiceCountBadge");
+        if (badge) badge.textContent = `${count} invoice${count !== 1 ? "s" : ""}`;
+      }
+
+      /* ---- Filter buttons ---- */
+      const filterBtns = document.querySelectorAll(".filter-btn");
+      const searchInput = document.getElementById("searchInput");
+      let activeFilter  = "all";
+      let searchQuery   = "";
+
+      filterBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+          filterBtns.forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          activeFilter = btn.dataset.filter;
+          applyFilters();
+        });
+      });
+
+      if (searchInput) {
+        searchInput.addEventListener("input", e => {
+          searchQuery = e.target.value.trim().toLowerCase();
+          applyFilters();
+        });
+      }
+
+      function applyFilters() {
+        const rows = document.querySelectorAll("#invoiceList .invoice-row");
+        let visible = 0;
+
+        rows.forEach(row => {
+          const id     = (row.querySelector(".invoice-id")?.textContent     || "").toLowerCase();
+          const client = (row.querySelector(".invoice-client")?.textContent || "").toLowerCase();
+          const status = (row.querySelector(".status")?.textContent         || "").toLowerCase().trim();
+
+          const matchesSearch = !searchQuery || id.includes(searchQuery) || client.includes(searchQuery);
+          const matchesFilter =
+            activeFilter === "all" ||
+            (activeFilter === "paid"    && status.includes("paid"))    ||
+            (activeFilter === "pending" && status.includes("pending"));
+
+          if (matchesSearch && matchesFilter) {
+            row.style.display = "";
+            visible++;
+          } else {
+            row.style.display = "none";
+          }
+        });
+
+        updateCountBadge(visible);
+      }
+
+      /* ---- Watch invoice list for changes, then style & update count ---- */
+      const listEl = document.getElementById("invoiceList");
+
+      if (listEl) {
+        const observer = new MutationObserver(() => {
+          /* Style injected rows */
+          listEl.querySelectorAll(".invoice-row").forEach(row => {
+            if (row.dataset.styled) return;
+            row.dataset.styled = "1";
+
+            /* Wrap cells in semantic spans for CSS targeting */
+            const cells = row.querySelectorAll("span");
+            if (cells[0]) cells[0].classList.add("invoice-id");
+            if (cells[1]) cells[1].classList.add("invoice-client");
+            if (cells[2]) cells[2].classList.add("invoice-amount");
+            if (cells[4]) cells[4].classList.add("payment-method");
+
+            /* Style action buttons */
+            row.querySelectorAll(".pdf-btn").forEach(b => {
+              b.classList.add("btn-small", "primary");
+            });
+            row.querySelectorAll(".delete-btn").forEach(b => {
+              b.classList.add("btn-small", "danger");
+            });
+          });
+
+          /* Update count */
+          const total = listEl.querySelectorAll(".invoice-row").length;
+          updateCountBadge(total);
+          applyFilters();
+        });
+
+        observer.observe(listEl, { childList: true, subtree: true });
+      }
+
+      /* ---- Toast helper for payment confirmations ---- */
+      window.showViewToast = function(msg, type = "success") {
+        const t = document.createElement("div");
+        t.className = "toast";
+        t.style.borderLeftColor = type === "error" ? "var(--danger)" : "var(--success)";
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 2800);
+      };
+
+    });
+  </script>
+
+</body>
+</html>

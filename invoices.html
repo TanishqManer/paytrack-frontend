@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Invoices | PayTrack</title>
+
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/invoices.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- TOP NAV -->
+  <header class="top-nav">
+    <span class="logo">PayTrack</span>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <button class="btn-small primary" onclick="window.location.href='create-invoice-v2.html'">
+        + New Invoice
+      </button>
+      <button class="btn-small" onclick="history.back()">← Back</button>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="page">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+      <div>
+        <h1>Invoices</h1>
+        <p class="muted">All your generated invoices in one place</p>
+      </div>
+      <span class="invoice-count-badge" id="invoiceCountBadge">0 invoices</span>
+    </div>
+
+    <!-- TABLE HEADER -->
+    <div class="invoice-table-header">
+      <span>Invoice ID</span>
+      <span>Client</span>
+      <span>Total</span>
+      <span>Status</span>
+      <span>Actions</span>
+    </div>
+
+    <!-- INVOICE LIST — populated by invoices.js -->
+    <div id="invoiceList"></div>
+
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/invoices.js"></script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const listEl = document.getElementById("invoiceList");
+      const badge  = document.getElementById("invoiceCountBadge");
+
+      function updateBadge() {
+        const rows = listEl ? listEl.querySelectorAll(".invoice-row").length : 0;
+        if (badge) badge.textContent = `${rows} invoice${rows !== 1 ? "s" : ""}`;
+      }
+
+      if (listEl) {
+        const obs = new MutationObserver(() => {
+          /* Style buttons injected by invoices.js */
+          listEl.querySelectorAll(".pay-btn:not([data-styled])").forEach(btn => {
+            btn.dataset.styled = "1";
+            btn.classList.add("btn-small", "primary");
+          });
+          listEl.querySelectorAll(".delete-btn:not([data-styled])").forEach(btn => {
+            btn.dataset.styled = "1";
+            btn.classList.add("btn-small", "danger");
+          });
+          updateBadge();
+        });
+        obs.observe(listEl, { childList: true, subtree: true });
+      }
+
+      /* Initial count after invoices.js runs */
+      setTimeout(updateBadge, 50);
+    });
+  </script>
+
+</body>
+</html>

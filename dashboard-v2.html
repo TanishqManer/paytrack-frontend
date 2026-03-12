@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard | PayTrack</title>
+
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/dashboard-v2.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- TOP NAV -->
+  <header class="top-nav">
+
+    <div class="nav-left branding-wrap">
+      <div class="paytrack-brand">
+        <span class="logo">PayTrack</span>
+      </div>
+      <span class="brand-divider">|</span>
+      <div class="business-brand hidden" id="businessBrandWrap">
+        <img id="businessLogoHeader" class="business-logo" alt="Business Logo" />
+        <span id="businessNameHeader" class="business-name"></span>
+      </div>
+    </div>
+
+    <div class="nav-center">
+      <input type="text" placeholder="Search invoices, clients…" />
+    </div>
+
+    <div class="nav-right profile-wrapper">
+      <span class="plan">FREE</span>
+      <div class="avatar" id="avatarBtn">T</div>
+
+      <div class="profile-menu hidden" id="profileMenu">
+        <div class="profile-section">
+          <p class="profile-name">Your Account</p>
+          <p class="profile-email" id="profileEmailDisplay"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="d6a3a5b3a496b3aeb7bba6bab3f8b5b9bb">[email&#160;protected]</a></p>
+        </div>
+        <div class="menu-divider"></div>
+        <button class="menu-item" data-action="profile">👤 &nbsp;Profile</button>
+        <button class="menu-item" data-action="settings">⚙️ &nbsp;Settings</button>
+        <button class="menu-item" data-action="manage-business">🏢 &nbsp;Manage Business</button>
+        <div class="menu-divider"></div>
+        <button class="menu-item logout" data-action="logout">🚪 &nbsp;Logout</button>
+      </div>
+    </div>
+
+  </header>
+
+  <!-- MAIN DASHBOARD -->
+  <main class="dashboard">
+
+    <!-- HEADER ROW -->
+    <section class="dashboard-header">
+      <div>
+        <h1>Dashboard</h1>
+        <p class="muted">Track your billing and payments</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn-secondary" onclick="window.location.href='add-item.html'">
+          + Add Item
+        </button>
+        <button class="btn-primary" id="createInvoiceBtn">
+          + Create Invoice
+        </button>
+      </div>
+    </section>
+
+    <!-- STATS — all populated by JS -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <span>Total Revenue</span>
+        <h2 id="statRevenue">—</h2>
+      </div>
+      <div class="stat-card">
+        <span>Paid Invoices</span>
+        <h2 id="statPaid">—</h2>
+      </div>
+      <div class="stat-card">
+        <span>Pending Amount</span>
+        <h2 id="statPending">—</h2>
+      </div>
+      <div class="stat-card">
+        <span>Clients</span>
+        <h2 id="statClients">—</h2>
+      </div>
+    </section>
+
+    <!-- CONTENT GRID -->
+    <section class="dashboard-grid">
+
+      <!-- RECENT INVOICES PANEL -->
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Recent Invoices</h3>
+          <a href="#" class="link" id="viewAllLink">View all →</a>
+        </div>
+        <!-- Column labels -->
+        <div class="invoice-row inv-col-label">
+          <span>Invoice</span>
+          <span>Client</span>
+          <span>Status</span>
+          <span>Amount</span>
+        </div>
+        <!-- Rows injected by JS -->
+      </div>
+
+      <!-- INSIGHTS PANEL — all real-time from JS -->
+      <div class="panel soft">
+        <h3>Insights</h3>
+
+        <div class="insight-item">
+          <div class="label">Last 7 Days</div>
+          <div class="value accent" id="insightWeek">—</div>
+        </div>
+
+        <div class="insight-item">
+          <div class="label">This Month</div>
+          <div class="value" id="insightMonth">—</div>
+        </div>
+
+        <div class="insight-item">
+          <div class="label">Best Client</div>
+          <div class="value" id="insightBestClient">—</div>
+        </div>
+
+        <div class="insight-item">
+          <div class="label">Avg Invoice Value</div>
+          <div class="value" id="insightAvg">—</div>
+        </div>
+
+        <div class="insight-item">
+          <div class="label">Collection Rate</div>
+          <div class="value accent" id="insightRate">—</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <p class="alert-text" id="alertText">Loading…</p>
+      </div>
+
+    </section>
+  </main>
+
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="js/api.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/dashboard-v2.js"></script>
+
+  <script>
+  document.addEventListener("DOMContentLoaded", () => {
+
+    /* ── Auth ── */
+    if (!localStorage.getItem("paytrack_token")) {
+      window.location.href = "login.html"; return;
+    }
+
+    /* ── Helpers ── */
+    const cur = (() => {
+      const s = JSON.parse(localStorage.getItem("paytrack_settings") || "{}");
+      return s.invoice?.currency || "₹";
+    })();
+
+    const fmt = (n) => {
+      const num = Number(n || 0);
+      const parts = num.toFixed(2).split(".");
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      // Drop .00 for whole numbers to keep it clean
+      return parts[1] === "00" ? `${cur}${parts[0]}` : `${cur}${parts.join(".")}`;
+    };
+
+    const getInvoices = () =>
+      JSON.parse(localStorage.getItem("paytrack_invoices") || "[]");
+    const getClients = () =>
+      JSON.parse(localStorage.getItem("paytrack_clients") || "[]");
+
+    /* ── Business branding ── */
+    function loadBusinessBranding() {
+      const biz = JSON.parse(localStorage.getItem("paytrack_business") || "{}");
+      const wrap    = document.getElementById("businessBrandWrap");
+      const nameEl  = document.getElementById("businessNameHeader");
+      const logoEl  = document.getElementById("businessLogoHeader");
+
+      if (!biz.saved) { wrap?.classList.add("hidden"); return; }
+      wrap?.classList.remove("hidden");
+      if (nameEl) nameEl.textContent = biz.name || "";
+      if (logoEl && biz.logo) {
+        logoEl.src = biz.logo;
+        logoEl.style.display = "block";
+      } else if (logoEl) {
+        logoEl.style.display = "none";
+      }
+    }
+    loadBusinessBranding();
+    window.addEventListener("focus", loadBusinessBranding);
+    window.addEventListener("storage", (e) => {
+      if (e.key === "paytrack_business") loadBusinessBranding();
+    });
+
+    /* ── User info ── */
+    const email = localStorage.getItem("paytrack_user") || "";
+    const avatar = document.getElementById("avatarBtn");
+    const emailEl = document.getElementById("profileEmailDisplay");
+    if (avatar && email) avatar.textContent = email.charAt(0).toUpperCase();
+    if (emailEl && email) emailEl.textContent = email;
+
+    /* ── Profile menu handled by nav.js ── */
+
+    /* ── Nav buttons ── */
+    document.getElementById("createInvoiceBtn")?.addEventListener("click", () => {
+      location.href = "create-invoice-v2.html";
+    });
+    document.getElementById("viewAllLink")?.addEventListener("click", (e) => {
+      e.preventDefault(); location.href = "view-invoices.html";
+    });
+
+    /* ── Search ── */
+    const searchInput = document.querySelector(".nav-center input");
+    if (searchInput) {
+      searchInput.addEventListener("input", (e) => {
+        const q = e.target.value.trim().toLowerCase();
+        renderRecentInvoices(
+          q ? getInvoices().filter(inv =>
+            inv.id.toLowerCase().includes(q) ||
+            (inv.clientName || "").toLowerCase().includes(q) ||
+            inv.status.toLowerCase().includes(q)
+          ) : null
+        );
+      });
+    }
+
+    /* ── Theme ── */
+    const s = JSON.parse(localStorage.getItem("paytrack_settings") || "{}");
+    if (s.appearance?.theme === "dark") document.body.classList.add("dark");
+
+    /* ════════════════════════════════════════
+       STATS
+       ════════════════════════════════════════ */
+    function updateStats() {
+      const invoices = getInvoices();
+      const clients  = getClients();
+
+      let totalRevenue = 0, paidCount = 0, pendingAmt = 0;
+      invoices.forEach(inv => {
+        const t = Number(inv.total || 0);
+        totalRevenue += t;
+        if (inv.status === "paid") { paidCount++; }
+        else { pendingAmt += t; }
+      });
+
+      document.getElementById("statRevenue").textContent = fmt(totalRevenue);
+      document.getElementById("statPaid").textContent    = paidCount;
+      document.getElementById("statPending").textContent = fmt(pendingAmt);
+      document.getElementById("statClients").textContent = clients.length || countUniqueClients(invoices);
+    }
+
+    function countUniqueClients(invoices) {
+      return new Set(
+        invoices.map(inv => (inv.clientName || "").trim().toLowerCase()).filter(Boolean)
+      ).size;
+    }
+
+    /* ════════════════════════════════════════
+       REAL-TIME INSIGHTS
+       ════════════════════════════════════════ */
+    function updateInsights() {
+      const invoices = getInvoices();
+      const now      = new Date();
+
+      /* Last 7 days revenue */
+      const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+      const week7Rev = invoices
+        .filter(inv => inv.status === "paid" && new Date(inv.paidAt || inv.createdAt) >= sevenDaysAgo)
+        .reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+
+      /* This month revenue */
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const monthRev = invoices
+        .filter(inv => inv.status === "paid" && new Date(inv.paidAt || inv.createdAt) >= monthStart)
+        .reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+
+      /* Best client by total paid */
+      const clientTotals = {};
+      invoices.forEach(inv => {
+        const name = (inv.clientName || "").trim();
+        if (!name) return;
+        clientTotals[name] = (clientTotals[name] || 0) + Number(inv.total || 0);
+      });
+      const bestClient = Object.entries(clientTotals)
+        .sort((a, b) => b[1] - a[1])[0];
+
+      /* Average invoice value */
+      const totalAmt = invoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+      const avgVal   = invoices.length ? totalAmt / invoices.length : 0;
+
+      /* Collection rate = paid / total invoices */
+      const paidCount = invoices.filter(i => i.status === "paid").length;
+      const rate = invoices.length ? Math.round((paidCount / invoices.length) * 100) : 0;
+
+      /* Render */
+      document.getElementById("insightWeek").textContent       = invoices.length ? fmt(week7Rev) : "—";
+      document.getElementById("insightMonth").textContent      = invoices.length ? fmt(monthRev)  : "—";
+      document.getElementById("insightBestClient").textContent = bestClient ? bestClient[0] : "—";
+      document.getElementById("insightAvg").textContent        = invoices.length ? fmt(avgVal) : "—";
+      document.getElementById("insightRate").textContent       = invoices.length ? `${rate}%` : "—";
+
+      /* Alert text */
+      const pending = invoices.filter(i => i.status !== "paid").length;
+      const alertEl = document.getElementById("alertText");
+      if (alertEl) {
+        alertEl.textContent = pending > 0
+          ? `${pending} invoice${pending !== 1 ? "s" : ""} pending payment`
+          : invoices.length === 0
+          ? "No invoices yet — create your first one!"
+          : "All invoices are paid 🎉";
+      }
+    }
+
+    /* ════════════════════════════════════════
+       RECENT INVOICES
+       ════════════════════════════════════════ */
+    function renderRecentInvoices(list) {
+      const panel = document.querySelector(".panel");
+      if (!panel) return;
+
+      /* Remove old rows (keep header label row) */
+      panel.querySelectorAll(".invoice-row:not(.inv-col-label)").forEach(r => r.remove());
+      panel.querySelectorAll(".empty-state-dash").forEach(r => r.remove());
+
+      const invoices = (list || getInvoices()).slice(0, 4);
+
+      if (!invoices.length) {
+        const empty = document.createElement("p");
+        empty.className = "empty-state-dash muted";
+        empty.style.cssText = "padding:28px 0;text-align:center;font-size:14px;";
+        empty.textContent = list ? "No matching invoices." : "No invoices yet. Create your first!";
+        panel.appendChild(empty);
+        return;
+      }
+
+      invoices.forEach(inv => {
+        const row = document.createElement("div");
+        row.className = "invoice-row";
+        row.innerHTML = `
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:var(--accent-light)">
+            ${inv.id}
+          </span>
+          <span class="muted">${inv.clientName || "—"}</span>
+          <span class="${inv.status === "paid" ? "paid" : "pending"}">
+            ${inv.status.toUpperCase()}
+          </span>
+          <span style="font-weight:600;">${fmt(inv.total)}</span>`;
+        panel.appendChild(row);
+      });
+    }
+
+        /* ── Init all ── */
+        updateStats();
+        updateInsights();
+        renderRecentInvoices();
+    
+      });
+      </script>
+    </body>
+    </html>

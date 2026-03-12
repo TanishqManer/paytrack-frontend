@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Profile | PayTrack</title>
+
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/profile.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- TOP NAV -->
+  <header class="top-nav">
+    <span class="logo">PayTrack</span>
+    <button class="btn-secondary" onclick="history.back()">← Back</button>
+  </header>
+
+  <!-- MAIN -->
+  <main class="page">
+
+    <div class="page-header">
+      <h1>Profile</h1>
+      <p>Manage your account details and preferences</p>
+    </div>
+
+    <!-- PROFILE HERO -->
+    <div class="profile-hero">
+      <div class="profile-avatar-large" id="profileAvatarLarge">U</div>
+      <div class="profile-info">
+        <h2 id="profileDisplayName">Your Account</h2>
+        <p id="profileDisplayEmail"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="80f5f3e5f2c0e5f8e1edf0ece5aee3efed">[email&#160;protected]</a></p>
+        <span class="profile-plan-badge">✦ Free Plan</span>
+      </div>
+    </div>
+
+    <!-- ACCOUNT INFO -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">📧</div>
+        <div>
+          <h3>Account Info</h3>
+          <p>Your login email address</p>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="profileEmail" disabled />
+      </div>
+    </div>
+
+    <!-- APPEARANCE -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">🎨</div>
+        <div>
+          <h3>Appearance</h3>
+          <p>Customize how the app looks</p>
+        </div>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <strong>Dark Mode</strong>
+          <span>Switch to a dark color scheme</span>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="darkModeToggle" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- CHANGE PASSWORD -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">🔒</div>
+        <div>
+          <h3>Change Password</h3>
+          <p>Update your account password</p>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>New Password</label>
+        <input type="password" id="newPassword" placeholder="Enter new password" />
+      </div>
+
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <input type="password" id="confirmPassword" placeholder="Confirm new password" />
+      </div>
+
+      <div class="success-msg" id="passwordSuccess">
+        ✓ Password updated successfully
+      </div>
+
+      <button id="changePasswordBtn" class="btn-primary">
+        Update Password
+      </button>
+    </div>
+
+    <!-- DANGER ZONE -->
+    <div class="danger-card">
+      <div class="card-header">
+        <div class="card-icon">⚠️</div>
+        <div>
+          <h3>Danger Zone</h3>
+          <p>Irreversible actions — proceed with caution</p>
+        </div>
+      </div>
+
+      <p style="font-size:14px; color:var(--text-secondary); margin-bottom:16px;">
+        Logging out will clear your session. All local data (invoices, settings, items) is stored in your browser.
+      </p>
+
+      <button class="btn-danger" id="logoutBtn">
+        🚪 &nbsp;Logout of PayTrack
+      </button>
+    </div>
+
+  </main>
+
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="js/profile.js"></script>
+  <script>
+    /* ---- Profile hero population ---- */
+    const userEmail = localStorage.getItem("paytrack_user") || "";
+
+    const avatarEl      = document.getElementById("profileAvatarLarge");
+    const displayName   = document.getElementById("profileDisplayName");
+    const displayEmail  = document.getElementById("profileDisplayEmail");
+
+    if (userEmail) {
+      avatarEl.textContent    = userEmail.charAt(0).toUpperCase();
+      displayEmail.textContent = userEmail;
+      displayName.textContent  = userEmail.split("@")[0];
+    }
+
+    /* ---- Logout button ---- */
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", () => {
+        localStorage.clear();
+        window.location.href = "login.html";
+      });
+    }
+
+        /* ---- Password success feedback ---- */
+        const changePwBtn    = document.getElementById("changePasswordBtn");
+        const passwordSuccess = document.getElementById("passwordSuccess");
+        const origChangePw   = changePwBtn.onclick;
+    
+        changePwBtn.addEventListener("click", () => {
+          const newPass     = document.getElementById("newPassword").value;
+          const confirmPass = document.getElementById("confirmPassword").value;
+        });
+      </script>
+    </body>
+    </html>

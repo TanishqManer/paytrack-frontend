@@ -1,0 +1,12 @@
+.subtitle {
+  color: #6b7280;
+  margin-bottom: 20px;
+}
+
+textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+}

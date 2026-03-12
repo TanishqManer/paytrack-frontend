@@ -1,0 +1,81 @@
+/* ============================
+   Auth Pages Styling
+   ============================ */
+
+.auth-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #eff6ff, #ffffff);
+}
+
+.auth-card {
+    background: #ffffff;
+    padding: 40px;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.1);
+}
+
+.auth-card h2 {
+    margin-bottom: 10px;
+    font-size: 26px;
+}
+
+.auth-card p {
+    color: #6b7280;
+    margin-bottom: 30px;
+}
+
+/* ============================
+   Form Elements
+   ============================ */
+
+.input-group {
+    margin-bottom: 20px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    font-size: 14px;
+    transition: border 0.3s;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: #2563eb;
+}
+
+/* ============================
+   Buttons
+   ============================ */
+
+.full-width {
+    width: 100%;
+    margin-top: 10px;
+}
+
+/* ============================
+   Footer
+   ============================ */
+
+.auth-footer {
+    margin-top: 25px;
+    text-align: center;
+}
+
+.auth-footer a {
+    color: #2563eb;
+    font-weight: 600;
+}
