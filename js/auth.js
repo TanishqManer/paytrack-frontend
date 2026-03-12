@@ -55,6 +55,176 @@ function setLoading(btn, loading, originalText) {
 }
 
 /* ============================================================
+   OTP OVERLAY — shown after register form submit
+   ============================================================ */
+function showOtpOverlay(email, name, onVerified) {
+  /* Remove any existing overlay */
+  document.getElementById("otpOverlay")?.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "otpOverlay";
+  overlay.style.cssText = `
+    position:fixed;inset:0;background:rgba(0,0,0,0.7);
+    display:flex;align-items:center;justify-content:center;
+    z-index:99999;backdrop-filter:blur(4px);
+  `;
+
+  overlay.innerHTML = `
+    <div style="
+      background:#13131f;border:1px solid rgba(99,102,241,0.3);
+      border-radius:20px;padding:40px;width:100%;max-width:400px;
+      box-shadow:0 40px 100px rgba(0,0,0,0.6);
+      font-family:'DM Sans',sans-serif;
+    ">
+      <div style="text-align:center;margin-bottom:28px;">
+        <div style="
+          width:56px;height:56px;border-radius:50%;
+          background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);
+          display:flex;align-items:center;justify-content:center;
+          font-size:24px;margin:0 auto 16px;
+        ">📧</div>
+        <h2 style="margin:0 0 8px;color:#fff;font-size:22px;font-weight:800;letter-spacing:-0.02em;">
+          Check your email
+        </h2>
+        <p style="margin:0;color:#9ca3af;font-size:14px;line-height:1.6;">
+          We sent a 6-digit code to<br>
+          <strong style="color:#a5b4fc;">${email}</strong>
+        </p>
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:center;margin-bottom:24px;" id="otpInputs">
+        ${[0,1,2,3,4,5].map(i => `
+          <input
+            type="text" maxlength="1" inputmode="numeric"
+            data-idx="${i}"
+            style="
+              width:48px;height:56px;text-align:center;
+              background:#1a1a2e;border:1.5px solid rgba(99,102,241,0.3);
+              border-radius:10px;color:#fff;font-size:22px;font-weight:700;
+              outline:none;transition:border-color 0.2s;
+              font-family:'DM Sans',sans-serif;
+            "
+          />
+        `).join("")}
+      </div>
+
+      <div id="otpError" style="
+        color:#fca5a5;font-size:13px;text-align:center;
+        margin-bottom:16px;min-height:20px;
+      "></div>
+
+      <button id="otpVerifyBtn" style="
+        width:100%;padding:14px;background:#6366f1;color:#fff;
+        border:none;border-radius:12px;font-size:15px;font-weight:600;
+        cursor:pointer;transition:background 0.2s;margin-bottom:16px;
+        font-family:'DM Sans',sans-serif;
+      ">Verify Code</button>
+
+      <div style="text-align:center;">
+        <button id="otpResendBtn" style="
+          background:none;border:none;color:#6366f1;font-size:13px;
+          cursor:pointer;font-family:'DM Sans',sans-serif;
+        ">Resend code</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  /* Auto-focus first input */
+  const inputs = overlay.querySelectorAll("input[data-idx]");
+  inputs[0]?.focus();
+
+  /* Auto-advance on input */
+  inputs.forEach((input, i) => {
+    input.addEventListener("input", (e) => {
+      const val = e.target.value.replace(/\D/g, "");
+      e.target.value = val;
+      if (val && i < 5) inputs[i + 1].focus();
+    });
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Backspace" && !input.value && i > 0) {
+        inputs[i - 1].focus();
+      }
+    });
+
+    /* Style on focus */
+    input.addEventListener("focus", () => {
+      input.style.borderColor = "#6366f1";
+      input.style.boxShadow = "0 0 0 3px rgba(99,102,241,0.2)";
+    });
+    input.addEventListener("blur", () => {
+      input.style.borderColor = "rgba(99,102,241,0.3)";
+      input.style.boxShadow = "none";
+    });
+  });
+
+  /* Paste support — paste all 6 digits at once */
+  inputs[0].addEventListener("paste", (e) => {
+    e.preventDefault();
+    const pasted = (e.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "");
+    pasted.split("").slice(0, 6).forEach((ch, i) => {
+      if (inputs[i]) inputs[i].value = ch;
+    });
+    inputs[Math.min(pasted.length, 5)].focus();
+  });
+
+  /* Collect OTP value */
+  function getOtp() {
+    return Array.from(inputs).map(i => i.value).join("");
+  }
+
+  /* Verify button */
+  const verifyBtn = overlay.querySelector("#otpVerifyBtn");
+  const errorEl   = overlay.querySelector("#otpError");
+
+  async function doVerify() {
+    const otp = getOtp();
+    if (otp.length < 6) {
+      errorEl.textContent = "Please enter the full 6-digit code.";
+      return;
+    }
+
+    verifyBtn.disabled    = true;
+    verifyBtn.textContent = "Verifying…";
+    errorEl.textContent   = "";
+
+    try {
+      const data = await window.PayTrackAPI.Auth.verifyOtp(email, otp, name);
+      overlay.remove();
+      onVerified(data);
+    } catch (err) {
+      errorEl.textContent   = err.message || "Invalid OTP. Please try again.";
+      verifyBtn.disabled    = false;
+      verifyBtn.textContent = "Verify Code";
+      /* Shake animation */
+      inputs.forEach(i => {
+        i.style.borderColor = "#ef4444";
+        setTimeout(() => i.style.borderColor = "rgba(99,102,241,0.3)", 1000);
+      });
+    }
+  }
+
+  verifyBtn.addEventListener("click", doVerify);
+
+  /* Enter key on any input triggers verify */
+  inputs.forEach(i => i.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") doVerify();
+  }));
+
+  /* Resend button */
+  overlay.querySelector("#otpResendBtn").addEventListener("click", async () => {
+    try {
+      await window.PayTrackAPI.Auth.requestOtp(email);
+      showAuthToast("New OTP sent to " + email, "success");
+    } catch (err) {
+      showAuthToast("Failed to resend OTP.", "error");
+    }
+  });
+}
+
+/* ============================================================
    LOGIN FORM
    ============================================================ */
 const loginForm = document.getElementById("loginForm");
@@ -78,7 +248,7 @@ if (loginForm) {
 
     try {
       await window.PayTrackAPI.Auth.login(email, password);
-      /* api.js login() saves token + redirects to dashboard-v2.html */
+      window.location.href = "dashboard-v2.html";
     } catch (err) {
       showAuthToast(err.message || "Login failed. Please try again.");
       if (btn) setLoading(btn, false, origText);
@@ -87,7 +257,7 @@ if (loginForm) {
 }
 
 /* ============================================================
-   REGISTER FORM
+   REGISTER FORM — OTP flow
    ============================================================ */
 const registerForm = document.getElementById("registerForm");
 if (registerForm) {
@@ -103,31 +273,36 @@ if (registerForm) {
                   || registerForm.querySelector("button");
 
     /* Validation */
-    if (!name) {
-      showAuthToast("Full name is required.");
-      return;
-    }
-    if (!email) {
-      showAuthToast("Email address is required.");
-      return;
-    }
+    if (!name) { showAuthToast("Full name is required."); return; }
+    if (!email) { showAuthToast("Email address is required."); return; }
     if (!password || password.length < 6) {
-      showAuthToast("Password must be at least 6 characters.");
-      return;
+      showAuthToast("Password must be at least 6 characters."); return;
     }
     if (confirm && password !== confirm) {
-      showAuthToast("Passwords do not match.");
-      return;
+      showAuthToast("Passwords do not match."); return;
     }
 
     const origText = btn?.textContent || "Create Account";
     if (btn) setLoading(btn, true, origText);
 
     try {
-      await window.PayTrackAPI.Auth.register(name, email, password);
-      /* api.js register() saves token + redirects to dashboard-v2.html */
+      /* Step 1: Request OTP */
+      await window.PayTrackAPI.Auth.requestOtp(email, name);
+      if (btn) setLoading(btn, false, origText);
+
+      /* Step 2: Show OTP overlay */
+      showOtpOverlay(email, name, async () => {
+        /* Step 3: OTP verified — now register with password */
+        try {
+          await window.PayTrackAPI.Auth.register(name, email, password);
+          window.location.href = "dashboard-v2.html";
+        } catch (err) {
+          showAuthToast(err.message || "Registration failed.");
+        }
+      });
+
     } catch (err) {
-      showAuthToast(err.message || "Registration failed. Please try again.");
+      showAuthToast(err.message || "Failed to send OTP. Please try again.");
       if (btn) setLoading(btn, false, origText);
     }
   });

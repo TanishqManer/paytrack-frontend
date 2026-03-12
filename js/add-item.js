@@ -1,11 +1,10 @@
 /* ============================================================
    PayTrack — Add Item Logic  (js/add-item.js)
-   - Items loaded from MongoDB via API (no localStorage)
+   - Items loaded from MongoDB via API
    - Image files uploaded to Cloudinary via API multipart
    - Image URL still supported as fallback
    - Delete calls API then removes from list
    - localStorage kept in sync for create-invoice page
-   - All original UI card logic preserved
    ============================================================ */
 
 /* ---------- AUTH GUARD ---------- */
@@ -15,8 +14,6 @@
   }
 })();
 
-/* ---------- WAIT FOR API ---------- */
-/* add-item.html loads api.js before this file, but guard anyway */
 function getAPI() {
   return window.PayTrackAPI;
 }
@@ -31,7 +28,6 @@ const urlInput   = document.getElementById("itemImageUrl");
 const itemsList  = document.getElementById("itemsList");
 
 /* ---------- IN-MEMORY STORE ---------- */
-/* Keeps a local copy so renderItems() is instant after mutations */
 let allItems = [];
 
 /* ---------- TOAST ---------- */
@@ -57,8 +53,6 @@ function showItemToast(msg, type = "success") {
 }
 
 /* ---------- SYNC LOCALSTORAGE ---------- */
-/* create-invoice-v2.js falls back to localStorage if API is slow,
-   so we keep it in sync after every mutation */
 function syncLocalStorage() {
   localStorage.setItem(
     "paytrack_items",
@@ -75,13 +69,12 @@ function syncLocalStorage() {
   );
 }
 
-/* ---------- RENDER ITEMS (GRID) ---------- */
-/* Card structure fully preserved from original */
+/* ---------- RENDER ITEMS ---------- */
 function renderItems() {
   if (!itemsList) return;
   itemsList.innerHTML = "";
 
-  /* Update count badge wired in add-item.html */
+  /* Update count badge */
   const countEl = document.getElementById("itemsCount");
   if (countEl) {
     countEl.textContent = `${allItems.length} item${allItems.length !== 1 ? "s" : ""}`;
@@ -97,7 +90,6 @@ function renderItems() {
   }
 
   allItems.forEach(item => {
-    /* Normalise field names — API uses imageUrl, legacy uses image */
     const imageUrl = item.imageUrl || item.image || "";
     const itemId   = item._id     || item.id;
 
@@ -107,7 +99,7 @@ function renderItems() {
     card.innerHTML = `
       <div class="item-image">
         ${imageUrl
-          ? `<img src="${imageUrl}" alt="${item.name}">`
+          ? `<img src="${imageUrl}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`
           : `<span class="muted small">No Image</span>`}
       </div>
 
@@ -146,7 +138,7 @@ async function loadItems() {
     renderItems();
   } catch (err) {
     console.error("Failed to load items:", err);
-    /* Fall back to localStorage so page still works */
+    /* Fall back to localStorage */
     const cached = JSON.parse(localStorage.getItem("paytrack_items") || "[]");
     allItems = cached.map(item => ({
       ...item,
@@ -167,7 +159,6 @@ async function deleteItem(id, btn) {
     const { Items } = getAPI();
     await Items.delete(id);
 
-    /* Remove from local store and re-render */
     allItems = allItems.filter(item => (item._id || item.id) !== id);
     syncLocalStorage();
     renderItems();
@@ -192,24 +183,17 @@ if (form) {
       return;
     }
 
-    /* Determine image source:
-       1. File upload  → send as multipart to Cloudinary via API
-       2. URL input    → send as plain string, API stores as-is
-       3. Neither      → no image                                 */
     const imageFile = fileInput?.files?.[0] || null;
     const imageUrl  = (!imageFile && urlInput?.value.trim()) ? urlInput.value.trim() : "";
 
-    /* Loading state */
     const submitBtn = form.querySelector("[type='submit']");
     const origText  = submitBtn?.textContent || "Save Item";
     if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Saving…"; }
 
     try {
       const { Items } = getAPI();
-
       const itemData = { name, description, price, imageUrl };
 
-      /* Items.create() handles multipart if imageFile is provided */
       const res  = await Items.create(itemData, imageFile || null);
       const item = res.data;
 
@@ -220,6 +204,10 @@ if (form) {
 
       form.reset();
       showItemToast("Item saved successfully ✓");
+
+      /* Scroll to items list so user sees the new item */
+      itemsList?.scrollIntoView({ behavior: "smooth", block: "start" });
+
     } catch (err) {
       showItemToast(err.message || "Failed to save item.", "error");
     } finally {
@@ -229,4 +217,6 @@ if (form) {
 }
 
 /* ---------- INIT ---------- */
-loadItems();
+document.addEventListener("DOMContentLoaded", () => {
+  loadItems();
+});

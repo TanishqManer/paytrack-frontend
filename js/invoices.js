@@ -1,6 +1,6 @@
 /* =====================================
    PayTrack – Invoices Logic
-   Marks paid instantly on dropdown select
+   Loads from API, falls back to localStorage
    ===================================== */
 
 /* ---------- AUTH GUARD ---------- */
@@ -11,24 +11,27 @@ if (!localStorage.getItem("paytrack_token")) {
 /* ---------- ELEMENTS ---------- */
 const invoiceList = document.getElementById("invoiceList");
 
-/* ---------- STORAGE ---------- */
+/* ---------- IN-MEMORY STORE ---------- */
+let allInvoices = [];
+
+/* ---------- STORAGE HELPERS ---------- */
 function getInvoices() {
-  return JSON.parse(localStorage.getItem("paytrack_invoices")) || [];
+  return allInvoices;
 }
-function saveInvoices(invoices) {
+function saveInvoicesCache(invoices) {
+  allInvoices = invoices;
   localStorage.setItem("paytrack_invoices", JSON.stringify(invoices));
 }
 
 /* ---------- SETTINGS (payment methods) ---------- */
 function getPaymentOptions() {
-  const s = JSON.parse(localStorage.getItem("paytrack_settings")) || {};
+  const s = JSON.parse(localStorage.getItem("paytrack_settings") || "{}");
   const p = s.payments || {};
   const opts = [];
-  /* Default cash+upi to true if settings never saved */
   if (p.cash !== false) opts.push("Cash");
   if (p.upi  !== false) opts.push("UPI");
   if (p.bank === true)  opts.push("Bank");
-  if (opts.length === 0) opts.push("Cash", "UPI"); // absolute fallback
+  if (opts.length === 0) opts.push("Cash", "UPI");
   return opts;
 }
 
@@ -80,8 +83,9 @@ function renderInvoices() {
     const row = document.createElement("div");
     row.className = "invoice-row";
 
-    const settings = JSON.parse(localStorage.getItem("paytrack_settings")) || {};
+    const settings = JSON.parse(localStorage.getItem("paytrack_settings") || "{}");
     const cur = settings.invoice?.currency || "₹";
+    const invoiceId = invoice.invoiceId || invoice.id || "—";
     const total = Number(invoice.total || 0)
       .toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
@@ -89,21 +93,21 @@ function renderInvoices() {
     let actionsHTML = "";
     if (invoice.status === "pending") {
       actionsHTML = `
-        <select class="payment-select" data-id="${invoice.id}">
+        <select class="payment-select" data-id="${invoiceId}">
           <option value="">Mark Paid</option>
           ${paymentOptions.map(p => `<option value="${p}">${p}</option>`).join("")}
         </select>
-        <button class="delete-btn" data-id="${invoice.id}">🗑</button>`;
+        <button class="delete-btn" data-id="${invoiceId}">🗑</button>`;
     } else {
       actionsHTML = `
         <span class="paid-via">
           ✓ ${invoice.paymentMethod || "Paid"}
         </span>
-        <button class="delete-btn" data-id="${invoice.id}">🗑</button>`;
+        <button class="delete-btn" data-id="${invoiceId}">🗑</button>`;
     }
 
     row.innerHTML = `
-      <span class="inv-id-cell">${invoice.id}</span>
+      <span class="inv-id-cell">${invoiceId}</span>
       <span class="inv-client-cell">${invoice.clientName || "—"}</span>
       <span class="inv-amt-cell">${cur}${total}</span>
       <span><span class="status ${invoice.status}">${invoice.status.toUpperCase()}</span></span>
@@ -111,14 +115,14 @@ function renderInvoices() {
 
     invoiceList.appendChild(row);
 
-    /* Mark paid instantly on dropdown change */
+    /* Mark paid via dropdown */
     const select = row.querySelector(".payment-select");
     if (select) {
-      select.addEventListener("change", () => {
+      select.addEventListener("change", async () => {
         const method = select.value;
         if (!method) return;
 
-        /* Immediately swap the row UI before re-render for instant feedback */
+        /* Instant UI feedback */
         const statusSpan = row.querySelector(".status");
         if (statusSpan) {
           statusSpan.className = "status paid";
@@ -128,39 +132,65 @@ function renderInvoices() {
         if (actionsCell) {
           actionsCell.innerHTML = `
             <span class="paid-via">✓ ${method}</span>
-            <button class="delete-btn" data-id="${invoice.id}">🗑</button>`;
-          /* Reattach delete handler on new button */
-          actionsCell.querySelector(".delete-btn").onclick = () => deleteInvoice(invoice.id);
+            <button class="delete-btn" data-id="${invoiceId}">🗑</button>`;
+          actionsCell.querySelector(".delete-btn").onclick = () => deleteInvoice(invoiceId);
         }
 
-        /* Persist to storage */
-        const all = getInvoices();
-        const inv = all.find(i => i.id === invoice.id);
-        if (inv) {
-          inv.status        = "paid";
-          inv.paymentMethod = method;
-          inv.paidAt        = new Date().toISOString();
-          saveInvoices(all);
+        /* Persist to API */
+        try {
+          await window.PayTrackAPI.Invoices.markPaid(invoiceId, method);
+          /* Update local cache */
+          const inv = allInvoices.find(i => (i.invoiceId || i.id) === invoiceId);
+          if (inv) {
+            inv.status        = "paid";
+            inv.paymentMethod = method;
+            inv.paidAt        = new Date().toISOString();
+          }
+          saveInvoicesCache(allInvoices);
+          showToast(`Marked as paid via ${method}`);
+        } catch (err) {
+          showToast("Failed to mark paid: " + err.message, "error");
         }
-
-        showToast(`Marked as paid via ${method}`);
       });
     }
 
     /* Delete handler */
     row.querySelector(".delete-btn")?.addEventListener("click", () => {
-      deleteInvoice(invoice.id);
+      deleteInvoice(invoiceId);
     });
   });
 }
 
 /* ---------- DELETE ---------- */
-function deleteInvoice(id) {
+async function deleteInvoice(id) {
   if (!confirm("Delete this invoice permanently?")) return;
-  saveInvoices(getInvoices().filter(inv => inv.id !== id));
-  showToast("Invoice deleted");
-  renderInvoices();
+  try {
+    await window.PayTrackAPI.Invoices.delete(id);
+    allInvoices = allInvoices.filter(inv => (inv.invoiceId || inv.id) !== id);
+    saveInvoicesCache(allInvoices);
+    showToast("Invoice deleted");
+    renderInvoices();
+  } catch (err) {
+    showToast("Failed to delete: " + err.message, "error");
+  }
+}
+
+/* ---------- LOAD FROM API ---------- */
+async function loadInvoices() {
+  try {
+    const res = await window.PayTrackAPI.Invoices.getAll();
+    allInvoices = res.data || [];
+    saveInvoicesCache(allInvoices);
+    renderInvoices();
+  } catch (err) {
+    console.error("Failed to load invoices:", err);
+    /* Fallback to localStorage cache */
+    allInvoices = JSON.parse(localStorage.getItem("paytrack_invoices") || "[]");
+    renderInvoices();
+  }
 }
 
 /* ---------- INIT ---------- */
-renderInvoices();
+document.addEventListener("DOMContentLoaded", () => {
+  loadInvoices();
+});

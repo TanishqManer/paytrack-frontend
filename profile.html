@@ -30,7 +30,7 @@
       <div class="profile-avatar-large" id="profileAvatarLarge">U</div>
       <div class="profile-info">
         <h2 id="profileDisplayName">Your Account</h2>
-        <p id="profileDisplayEmail"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="80f5f3e5f2c0e5f8e1edf0ece5aee3efed">[email&#160;protected]</a></p>
+        <p id="profileDisplayEmail">user@example.com</p>
         <span class="profile-plan-badge">✦ Free Plan</span>
       </div>
     </div>
@@ -84,16 +84,21 @@
       </div>
 
       <div class="form-group">
+        <label>Current Password</label>
+        <input type="password" id="currentPassword" placeholder="Enter current password" />
+      </div>
+
+      <div class="form-group">
         <label>New Password</label>
         <input type="password" id="newPassword" placeholder="Enter new password" />
       </div>
 
       <div class="form-group">
-        <label>Confirm Password</label>
+        <label>Confirm New Password</label>
         <input type="password" id="confirmPassword" placeholder="Confirm new password" />
       </div>
 
-      <div class="success-msg" id="passwordSuccess">
+      <div class="success-msg" id="passwordSuccess" style="display:none;">
         ✓ Password updated successfully
       </div>
 
@@ -113,7 +118,7 @@
       </div>
 
       <p style="font-size:14px; color:var(--text-secondary); margin-bottom:16px;">
-        Logging out will clear your session. All local data (invoices, settings, items) is stored in your browser.
+        Logging out will clear your session. All data is safely stored in the cloud.
       </p>
 
       <button class="btn-danger" id="logoutBtn">
@@ -123,39 +128,7 @@
 
   </main>
 
-  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="js/profile.js"></script>
-  <script>
-    /* ---- Profile hero population ---- */
-    const userEmail = localStorage.getItem("paytrack_user") || "";
-
-    const avatarEl      = document.getElementById("profileAvatarLarge");
-    const displayName   = document.getElementById("profileDisplayName");
-    const displayEmail  = document.getElementById("profileDisplayEmail");
-
-    if (userEmail) {
-      avatarEl.textContent    = userEmail.charAt(0).toUpperCase();
-      displayEmail.textContent = userEmail;
-      displayName.textContent  = userEmail.split("@")[0];
-    }
-
-    /* ---- Logout button ---- */
-    const logoutBtn = document.getElementById("logoutBtn");
-    if (logoutBtn) {
-      logoutBtn.addEventListener("click", () => {
-        localStorage.clear();
-        window.location.href = "login.html";
-      });
-    }
-
-        /* ---- Password success feedback ---- */
-        const changePwBtn    = document.getElementById("changePasswordBtn");
-        const passwordSuccess = document.getElementById("passwordSuccess");
-        const origChangePw   = changePwBtn.onclick;
-    
-        changePwBtn.addEventListener("click", () => {
-          const newPass     = document.getElementById("newPassword").value;
-          const confirmPass = document.getElementById("confirmPassword").value;
-        });
-      </script>
-    </body>
-    </html>
+  <script src="js/api.js"></script>
+  <script src="js/profile.js"></script>
+</body>
+</html>

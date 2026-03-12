@@ -2,9 +2,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   /* ============================================================
      PayTrack — View Invoices  (js/view-invoices.js)
-     - All data from MongoDB via PayTrackAPI (no localStorage)
-     - Cash:   manual Mark Paid dropdown → optional Send Invoice
+     - All data from MongoDB via PayTrackAPI
+     - Cash: manual Mark Paid dropdown → optional Send Invoice
      - Online: Razorpay checkout → auto-marks Paid → auto-emails receipt
+     - UPI QR code displayed in modal for easy scanning
      - PDF engine fully preserved from original
      ============================================================ */
 
@@ -14,12 +15,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  const { Invoices } = window.PayTrackAPI;
+  const { Invoices, Payments } = window.PayTrackAPI;
 
   /* ---------- ELEMENTS ---------- */
   const invoiceList = document.getElementById("invoiceList");
 
-  /* ---------- SETTINGS (cached locally for PDF + currency) ---------- */
+  /* ---------- SETTINGS ---------- */
   function getSettings() {
     return JSON.parse(localStorage.getItem("paytrack_settings")) || {};
   }
@@ -31,8 +32,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (payments.upi  === undefined) payments.upi  = true;
 
   /* ---------- IN-MEMORY INVOICE STORE ---------- */
-  /* We keep a local copy so PDF generation + instant UI updates work
-     without extra API round trips. */
   let allInvoices = [];
 
   /* ============================================================
@@ -65,6 +64,115 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   /* ============================================================
+     UPI QR CODE MODAL
+     Generates a UPI QR using Google Charts API
+     ============================================================ */
+  function showUpiQrModal(invoice) {
+    document.getElementById("upiQrModal")?.remove();
+
+    const upiId     = payments.upiId || "";
+    const bizName   = (JSON.parse(localStorage.getItem("paytrack_business") || "{}").name || "PayTrack").replace(/\s/g, "%20");
+    const amount    = Number(invoice.total || 0).toFixed(2);
+    const invoiceId = invoice.invoiceId || invoice.id || "";
+    const note      = `Invoice%20${invoiceId}`;
+
+    /* UPI deep link */
+    const upiLink = upiId
+      ? `upi://pay?pa=${upiId}&pn=${bizName}&am=${amount}&cu=INR&tn=${note}`
+      : null;
+
+    /* QR image via Google Charts */
+    const qrUrl = upiLink
+      ? `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(upiLink)}&choe=UTF-8`
+      : null;
+
+    const modal = document.createElement("div");
+    modal.id = "upiQrModal";
+    modal.style.cssText = `
+      position:fixed;inset:0;background:rgba(0,0,0,0.7);
+      display:flex;align-items:center;justify-content:center;
+      z-index:99999;backdrop-filter:blur(4px);
+    `;
+
+    modal.innerHTML = `
+      <div style="
+        background:#13131f;border:1px solid rgba(99,102,241,0.3);
+        border-radius:20px;padding:36px;width:100%;max-width:360px;
+        box-shadow:0 40px 100px rgba(0,0,0,0.6);
+        font-family:'DM Sans',sans-serif;text-align:center;
+      ">
+        <h3 style="margin:0 0 6px;color:#fff;font-size:20px;font-weight:800;">
+          💳 Collect Payment
+        </h3>
+        <p style="margin:0 0 24px;color:#9ca3af;font-size:13px;">
+          Invoice <strong style="color:#a5b4fc;">${invoiceId}</strong> ·
+          <strong style="color:#6ee7b7;">₹${amount}</strong>
+        </p>
+
+        ${qrUrl ? `
+          <div style="
+            background:#fff;border-radius:12px;padding:12px;
+            display:inline-block;margin-bottom:16px;
+          ">
+            <img src="${qrUrl}" width="200" height="200" alt="UPI QR Code" style="display:block;" />
+          </div>
+          <p style="color:#9ca3af;font-size:12px;margin:0 0 8px;">
+            Scan with any UPI app to pay
+          </p>
+          ${upiId ? `<p style="color:#a5b4fc;font-size:13px;font-weight:600;margin:0 0 20px;">UPI: ${upiId}</p>` : ""}
+        ` : `
+          <div style="
+            background:#1a1a2e;border:1px dashed rgba(99,102,241,0.3);
+            border-radius:12px;padding:24px;margin-bottom:20px;
+          ">
+            <p style="color:#9ca3af;font-size:13px;margin:0;">
+              No UPI ID configured.<br>
+              Add your UPI ID in <a href="settings.html" style="color:#6366f1;">Settings → Payment Methods</a>
+            </p>
+          </div>
+        `}
+
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+          <button id="qrMarkPaidBtn" style="
+            padding:10px 20px;background:#6366f1;color:#fff;
+            border:none;border-radius:10px;font-size:14px;font-weight:600;
+            cursor:pointer;font-family:'DM Sans',sans-serif;
+          ">✓ Mark as Paid (UPI)</button>
+          <button id="qrCollectOnlineBtn" style="
+            padding:10px 20px;background:rgba(99,102,241,0.15);color:#a5b4fc;
+            border:1px solid rgba(99,102,241,0.3);border-radius:10px;font-size:14px;font-weight:600;
+            cursor:pointer;font-family:'DM Sans',sans-serif;
+          ">💳 Razorpay</button>
+          <button id="qrCloseBtn" style="
+            padding:10px 20px;background:rgba(255,255,255,0.05);color:#9ca3af;
+            border:1px solid rgba(255,255,255,0.1);border-radius:10px;font-size:14px;
+            cursor:pointer;font-family:'DM Sans',sans-serif;
+          ">Close</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    /* Close */
+    modal.querySelector("#qrCloseBtn").addEventListener("click", () => modal.remove());
+    modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
+
+    /* Mark paid via UPI (manual confirm) */
+    modal.querySelector("#qrMarkPaidBtn").addEventListener("click", async () => {
+      const row = document.querySelector(`[data-invoice-id="${invoiceId}"]`);
+      modal.remove();
+      await markPaid(invoice, "UPI", row);
+    });
+
+    /* Razorpay online collect */
+    modal.querySelector("#qrCollectOnlineBtn").addEventListener("click", () => {
+      modal.remove();
+      openRazorpayCheckout(invoice);
+    });
+  }
+
+  /* ============================================================
      PDF GENERATION  (fully preserved from original)
      ============================================================ */
   async function downloadPDF(invoice) {
@@ -75,10 +183,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    /* Business data from cache (populated by nav.js via API) */
     const biz = JSON.parse(localStorage.getItem("paytrack_business")) || {};
-
-    /* jsPDF cannot render ₹ unicode */
     const rawCur = invoiceSettings.currency || "Rs.";
     const cur = rawCur === "₹" ? "Rs." : rawCur === "€" ? "EUR " : rawCur === "$" ? "$ " : rawCur + " ";
 
@@ -130,11 +235,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       } catch (_) { return "—"; }
     };
 
-    /* Use invoiceId from API response (field is invoiceId not id) */
     const invoiceDisplayId = invoice.invoiceId || invoice.id || "—";
     const isPaid = invoice.status === "paid";
 
-    /* Page background */
     box(0, 0, PW, PH, WHITE);
 
     /* ── HEADER ── */
@@ -382,7 +485,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       showToast(`PDF downloaded: ${fileName}`);
 
-      /* Return base64 for email sending */
       return new Promise(resolve => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result);
@@ -398,33 +500,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   /* ============================================================
      RAZORPAY CHECKOUT
-     Opens on business owner's device — client pays in person
      ============================================================ */
   async function openRazorpayCheckout(invoice) {
     showToast("Creating payment order…", "info");
 
     let orderData;
     try {
-      const res = await fetch(
-        `${window.PayTrackAPI._base || "https://paytrack-backend-sigma.vercel.app/api"}/payments/create-order`,
-        {
-          method:  "POST",
-          headers: {
-            "Content-Type":  "application/json",
-            "Authorization": `Bearer ${localStorage.getItem("paytrack_token")}`,
-          },
-          body: JSON.stringify({ invoiceId: invoice.invoiceId || invoice.id }),
-        }
-      );
-      const json = await res.json();
-      if (!json.success) throw new Error(json.message);
-      orderData = json.data;
+      const res = await Payments.createOrder(invoice.invoiceId || invoice.id);
+      if (!res.success) throw new Error(res.message);
+      orderData = res.data;
     } catch (err) {
       showToast("Could not create payment order: " + err.message, "error");
       return;
     }
 
-    /* Load Razorpay script dynamically if not already present */
     if (!window.Razorpay) {
       await new Promise((resolve, reject) => {
         const s = document.createElement("script");
@@ -453,33 +542,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       handler: async function (response) {
         showToast("Verifying payment…", "info");
         try {
-          const verifyRes = await fetch(
-            `${window.PayTrackAPI._base || "https://paytrack-backend-sigma.vercel.app/api"}/payments/verify`,
-            {
-              method:  "POST",
-              headers: {
-                "Content-Type":  "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("paytrack_token")}`,
-              },
-              body: JSON.stringify({
-                razorpayOrderId:   response.razorpay_order_id,
-                razorpayPaymentId: response.razorpay_payment_id,
-                razorpaySignature: response.razorpay_signature,
-                invoiceId:         invoiceDisplayId,
-              }),
-            }
-          );
-          const verifyJson = await verifyRes.json();
-          if (!verifyJson.success) throw new Error(verifyJson.message);
+          const verifyRes = await Payments.verify({
+            razorpayOrderId:   response.razorpay_order_id,
+            razorpayPaymentId: response.razorpay_payment_id,
+            razorpaySignature: response.razorpay_signature,
+            invoiceId:         invoiceDisplayId,
+          });
+          if (!verifyRes.success) throw new Error(verifyRes.message);
 
           showToast(`Payment confirmed! Invoice ${invoiceDisplayId} marked as Paid.`);
-
-          /* If client has email, receipt was auto-sent by backend */
-          if (invoice.clientEmail) {
-            showToast("Receipt emailed to client ✓");
-          }
-
-          /* Reload invoice list to reflect new status */
+          if (invoice.clientEmail) showToast("Receipt emailed to client ✓");
           await loadInvoices();
 
         } catch (err) {
@@ -488,9 +560,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       },
 
       modal: {
-        ondismiss: () => {
-          showToast("Payment cancelled.", "info");
-        },
+        ondismiss: () => showToast("Payment cancelled.", "info"),
       },
     };
 
@@ -512,32 +582,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     btn.textContent     = "Sending…";
 
     try {
-      /* Generate PDF and get base64 */
       showToast("Generating PDF…", "info");
       const pdfBase64 = await downloadPDF(invoice);
 
-      /* Call backend to email it */
       const invoiceDisplayId = invoice.invoiceId || invoice.id;
-      const res = await fetch(
-        `${window.PayTrackAPI._base || "https://paytrack-backend-sigma.vercel.app/api"}/payments/send-invoice`,
-        {
-          method:  "POST",
-          headers: {
-            "Content-Type":  "application/json",
-            "Authorization": `Bearer ${localStorage.getItem("paytrack_token")}`,
-          },
-          body: JSON.stringify({
-            invoiceId: invoiceDisplayId,
-            pdfBase64: pdfBase64 || null,
-          }),
-        }
-      );
-      const json = await res.json();
-      if (!json.success) throw new Error(json.message);
+      const res = await Payments.sendInvoice(invoiceDisplayId, pdfBase64 || null);
+      if (!res.success) throw new Error(res.message);
 
       showToast(`Invoice emailed to ${invoice.clientEmail} ✓`);
-
-      /* Reload so emailSentToClient badge updates */
       await loadInvoices();
 
     } catch (err) {
@@ -556,38 +608,37 @@ document.addEventListener("DOMContentLoaded", async () => {
       const invoiceDisplayId = invoice.invoiceId || invoice.id;
       await Invoices.markPaid(invoiceDisplayId, method);
 
-      /* Instant UI update — no full re-render flicker */
-      const statusSpan = row.querySelector(".status");
-      if (statusSpan) {
-        statusSpan.className  = "status paid";
-        statusSpan.textContent = "PAID";
+      /* Instant UI update */
+      if (row) {
+        const statusSpan = row.querySelector(".status");
+        if (statusSpan) {
+          statusSpan.className   = "status paid";
+          statusSpan.textContent = "PAID";
+        }
+
+        const actionsCell = row.querySelector(".actions");
+        if (actionsCell) {
+          actionsCell.innerHTML = buildPaidActions(
+            { ...invoice, status: "paid", paymentMethod: method },
+            false
+          );
+          attachPaidActions(actionsCell, { ...invoice, status: "paid", paymentMethod: method });
+        }
+
+        const pmCell = row.querySelector(".payment-method");
+        if (pmCell) {
+          pmCell.innerHTML = `<span style="color:var(--success);font-weight:600;">${method}</span>`;
+        }
       }
 
-      /* Replace actions cell with post-paid actions */
-      const actionsCell = row.querySelector(".actions");
-      if (actionsCell) {
-        actionsCell.innerHTML = buildPaidActions(
-          { ...invoice, status: "paid", paymentMethod: method },
-          false
-        );
-        attachPaidActions(actionsCell, { ...invoice, status: "paid", paymentMethod: method });
-      }
-
-      /* Update payment method cell */
-      const pmCell = row.querySelector(".payment-method");
-      if (pmCell) {
-        pmCell.innerHTML = `<span style="color:var(--success);font-weight:600;">${method}</span>`;
-      }
-
-      /* Update local cache */
-      const idx = allInvoices.findIndex(i => (i.invoiceId || i.id) === invoiceDisplayId);
+      const idx = allInvoices.findIndex(i => (i.invoiceId || i.id) === (invoice.invoiceId || invoice.id));
       if (idx !== -1) {
         allInvoices[idx].status        = "paid";
         allInvoices[idx].paymentMethod = method;
         allInvoices[idx].paidAt        = new Date().toISOString();
       }
 
-      showToast(`Invoice ${invoiceDisplayId} marked as paid via ${method}`);
+      showToast(`Invoice marked as paid via ${method}`);
 
     } catch (err) {
       showToast("Failed to mark paid: " + err.message, "error");
@@ -607,7 +658,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       allInvoices = allInvoices.filter(i => (i.invoiceId || i.id) !== invoiceDisplayId);
       showToast(`Invoice ${invoiceDisplayId} deleted`);
 
-      /* Update count badge (view-invoices.html inline script handles this) */
       const badge = document.getElementById("invoiceCountBadge");
       if (badge) {
         const count = document.querySelectorAll("#invoiceList .invoice-row").length;
@@ -623,14 +673,10 @@ document.addEventListener("DOMContentLoaded", async () => {
      ============================================================ */
   function buildPendingActions(invoice) {
     const invoiceDisplayId = invoice.invoiceId || invoice.id;
-
-    /* Cash / Bank options → manual dropdown */
     const manualOpts = [];
     if (payments.cash) manualOpts.push("Cash");
     if (payments.bank) manualOpts.push("Bank");
-
-    /* UPI → Razorpay checkout */
-    const hasOnline = payments.upi;
+    const hasUpi = payments.upi;
 
     let html = "";
 
@@ -641,9 +687,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       </select>`;
     }
 
-    if (hasOnline) {
+    if (hasUpi) {
       html += `<button class="btn-small primary collect-btn" data-id="${invoiceDisplayId}">
-        💳 Collect
+        📱 UPI / Pay
       </button>`;
     }
 
@@ -657,7 +703,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const invoiceDisplayId = invoice.invoiceId || invoice.id;
     let html = "";
 
-    /* Show send button if client has email — for cash, manual email trigger */
     if (invoice.clientEmail && invoice.paymentMethod !== "Online") {
       const label = emailSent ? "✓ Sent" : "📧 Send";
       html += `<button class="btn-small ${emailSent ? "" : "primary"} send-btn"
@@ -711,6 +756,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     invoices.forEach(invoice => {
       const row = document.createElement("div");
       row.className = "invoice-row";
+      /* data attribute for QR modal row lookup */
+      row.dataset.invoiceId = invoice.invoiceId || invoice.id || "";
 
       const invoiceDisplayId = invoice.invoiceId || invoice.id || "—";
       const isPaid           = invoice.status === "paid";
@@ -743,15 +790,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       const actionsCell = row.querySelector(".actions");
 
       if (!isPaid) {
-        /* Manual mark-paid dropdown (Cash / Bank) */
+        /* Manual mark-paid dropdown */
         actionsCell.querySelector(".payment-select")?.addEventListener("change", (e) => {
           if (!e.target.value) return;
           markPaid(invoice, e.target.value, row);
         });
 
-        /* Razorpay collect button (UPI / Online) */
+        /* UPI QR + collect button */
         actionsCell.querySelector(".collect-btn")?.addEventListener("click", () => {
-          openRazorpayCheckout(invoice);
+          showUpiQrModal(invoice);
         });
 
         /* PDF */
@@ -780,7 +827,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       const res = await Invoices.getAll();
       allInvoices = res.data || [];
 
-      /* Sync to localStorage so dashboard + PDF tools can use it */
       localStorage.setItem("paytrack_invoices", JSON.stringify(
         allInvoices.map(inv => ({ ...inv, id: inv.invoiceId }))
       ));

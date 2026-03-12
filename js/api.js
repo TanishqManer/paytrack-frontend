@@ -12,8 +12,6 @@ const getToken = () => localStorage.getItem("paytrack_token");
 
 const saveToken = (token) => localStorage.setItem("paytrack_token", token);
 
-/* FIX: was only saving email — now saves id, name, email so all
-   pages (profile, nav, dashboard) can read the correct values    */
 const saveUser = (user) => {
   localStorage.setItem("paytrack_user",      user.email || "");
   localStorage.setItem("paytrack_user_id",   user.id    || user._id || "");
@@ -56,7 +54,6 @@ async function apiFetch(path, options = {}) {
   }
 
   if (!res.ok) {
-    /* FIX: 401 → clear session and redirect to login */
     if (res.status === 401) {
       clearAuth();
       window.location.href = "login.html";
@@ -68,7 +65,7 @@ async function apiFetch(path, options = {}) {
   return data;
 }
 
-/* ── Multipart / file upload (browser sets Content-Type + boundary) ── */
+/* ── Multipart / file upload ── */
 async function apiUpload(path, formData) {
   const token = getToken();
 
@@ -106,6 +103,7 @@ async function apiUpload(path, formData) {
    AUTH
    ════════════════════════════════════════ */
 const Auth = {
+  /* Register — saves token + user, does NOT redirect (auth.js handles redirect after OTP) */
   async register(name, email, password) {
     const data = await apiFetch("/auth/register", {
       method: "POST",
@@ -113,10 +111,10 @@ const Auth = {
     });
     saveToken(data.token);
     saveUser(data.user);
-    window.location.href = "dashboard-v2.html";
     return data;
   },
 
+  /* Login — saves token + user + redirects */
   async login(email, password) {
     const data = await apiFetch("/auth/login", {
       method: "POST",
@@ -128,19 +126,19 @@ const Auth = {
     return data;
   },
 
-  /* ── OTP: request a one-time code sent to email ── */
-  async requestOtp(email) {
+  /* OTP: request a one-time code sent to email */
+  async requestOtp(email, name) {
     return apiFetch("/auth/otp/request", {
       method: "POST",
-      body:   { email },
+      body:   { email, name: name || "" },
     });
   },
 
-  /* ── OTP: verify the code and receive a session token ── */
-  async verifyOtp(email, otp) {
+  /* OTP: verify the code — saves token if new user created via OTP */
+  async verifyOtp(email, otp, name) {
     const data = await apiFetch("/auth/otp/verify", {
       method: "POST",
-      body:   { email, otp },
+      body:   { email, otp, name: name || "" },
     });
     if (data.token) {
       saveToken(data.token);
@@ -149,7 +147,7 @@ const Auth = {
     return data;
   },
 
-  /* ── Password change (authenticated) ── */
+  /* Password change (authenticated) */
   async changePassword(currentPassword, newPassword) {
     return apiFetch("/auth/change-password", {
       method: "POST",
@@ -166,7 +164,6 @@ const Auth = {
     return !!getToken();
   },
 
-  /* Handy getters so any page can read user info without re-fetching */
   getEmail()  { return localStorage.getItem("paytrack_user")      || ""; },
   getName()   { return localStorage.getItem("paytrack_user_name") || ""; },
   getUserId() { return localStorage.getItem("paytrack_user_id")   || ""; },
@@ -225,7 +222,6 @@ const Items = {
       fd.append("image",       imageFile);
       return apiUpload("/items", fd);
     }
-    /* imageUrl passed as plain URL or omitted */
     return apiFetch("/items", { method: "POST", body: itemData });
   },
 
@@ -280,13 +276,41 @@ const Clients = {
 };
 
 /* ════════════════════════════════════════
+   PAYMENTS
+   ════════════════════════════════════════ */
+const Payments = {
+  createOrder(invoiceId) {
+    return apiFetch("/payments/create-order", {
+      method: "POST",
+      body:   { invoiceId },
+    });
+  },
+
+  verify(data) {
+    return apiFetch("/payments/verify", {
+      method: "POST",
+      body:   data,
+    });
+  },
+
+  sendInvoice(invoiceId, pdfBase64 = null) {
+    return apiFetch("/payments/send-invoice", {
+      method: "POST",
+      body:   { invoiceId, pdfBase64 },
+    });
+  },
+};
+
+/* ════════════════════════════════════════
    EXPORT
    ════════════════════════════════════════ */
 window.PayTrackAPI = {
+  _base: API_BASE,
   Auth,
   Invoices,
   Items,
   Business,
   Settings,
   Clients,
+  Payments,
 };
