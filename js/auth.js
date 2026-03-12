@@ -78,7 +78,7 @@ if (loginForm) {
 
     try {
       await window.PayTrackAPI.Auth.login(email, password);
-      /* login() in api.js saves token + user and redirects to dashboard-v2.html */
+      /* api.js login() saves token + redirects to dashboard-v2.html */
     } catch (err) {
       showAuthToast(err.message || "Login failed. Please try again.");
       if (btn) setLoading(btn, false, origText);
@@ -125,8 +125,7 @@ if (registerForm) {
 
     try {
       await window.PayTrackAPI.Auth.register(name, email, password);
-      /* register() in api.js saves token + user and redirects to dashboard-v2.html */
-      showAuthToast("Account created! Redirecting…", "success");
+      /* api.js register() saves token + redirects to dashboard-v2.html */
     } catch (err) {
       showAuthToast(err.message || "Registration failed. Please try again.");
       if (btn) setLoading(btn, false, origText);
@@ -142,18 +141,4 @@ if (logoutBtn) {
   logoutBtn.addEventListener("click", () => {
     window.PayTrackAPI.Auth.logout();
   });
-}
-
-/* ============================================================
-   REDIRECT IF ALREADY LOGGED IN
-   (on login/register pages, skip straight to dashboard)
-   ============================================================ */
-if (window.PayTrackAPI?.Auth.isLoggedIn()) {
-  const onAuthPage =
-    window.location.pathname.includes("login") ||
-    window.location.pathname.includes("register");
-
-  if (onAuthPage) {
-    window.location.href = "dashboard-v2.html";
-  }
 }

@@ -113,6 +113,7 @@ const Auth = {
     });
     saveToken(data.token);
     saveUser(data.user);
+    window.location.href = "dashboard-v2.html";
     return data;
   },
 
@@ -121,9 +122,9 @@ const Auth = {
       method: "POST",
       body:   { email, password },
     });
-    /* FIX: was calling old saveUser that only stored email */
     saveToken(data.token);
     saveUser(data.user);
+    window.location.href = "dashboard-v2.html";
     return data;
   },
 
