@@ -142,56 +142,5 @@
 
   <script src="js/api.js"></script>
   <script src="js/add-item.js"></script>
-  <script>
-    /* ---- Enhance the render to use new card design & count ---- */
-    const _originalRender = window.renderItems;
-
-    function updateItemsCount() {
-      const countEl = document.getElementById("itemsCount");
-      const items = JSON.parse(localStorage.getItem("paytrack_items") || "[]");
-      if (countEl) {
-        countEl.textContent = `${items.length} item${items.length !== 1 ? "s" : ""}`;
-      }
-    }
-
-    /* Patch renderItems to also update count & use new card design */
-    const itemsListEl = document.getElementById("itemsList");
-    const originalObserver = new MutationObserver(() => {
-      updateItemsCount();
-
-      /* Re-style injected item cards to match new design */
-      document.querySelectorAll(".item-card .item-actions button").forEach(btn => {
-        btn.classList.add("btn-delete");
-        btn.classList.remove("btn-secondary");
-        btn.innerHTML = "🗑 Delete";
-      });
-    });
-
-    if (itemsListEl) {
-      originalObserver.observe(itemsListEl, { childList: true, subtree: true });
-    }
-
-    /* Initial count */
-    updateItemsCount();
-
-    /* Show toast on item save */
-    const addForm = document.getElementById("addItemForm");
-    if (addForm) {
-      addForm.addEventListener("submit", () => {
-        setTimeout(() => {
-          showToast("Item saved successfully ✓");
-          updateItemsCount();
-        }, 100);
-      });
-    }
-
-    function showToast(msg) {
-      const t = document.createElement("div");
-      t.className = "toast";
-      t.textContent = msg;
-      document.body.appendChild(t);
-      setTimeout(() => t.remove(), 2500);
-    }
-  </script>
 </body>
 </html>
