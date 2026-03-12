@@ -35,13 +35,7 @@ const itemsList  = document.getElementById("itemsList");
 let allItems = [];
 
 /* ---------- TOAST ---------- */
-function showToast(msg, type = "success") {
-  /* Re-use any existing toast function on the page (add-item.html
-     injects one); otherwise create our own */
-  if (typeof window.showToast === "function") {
-    window.showToast(msg);
-    return;
-  }
+function showItemToast(msg, type = "success") {
   document.querySelectorAll(".ai-toast").forEach(t => t.remove());
   const t = document.createElement("div");
   t.className = "ai-toast toast";
@@ -177,9 +171,9 @@ async function deleteItem(id, btn) {
     allItems = allItems.filter(item => (item._id || item.id) !== id);
     syncLocalStorage();
     renderItems();
-    showToast("Item deleted");
+    showItemToast("Item deleted");
   } catch (err) {
-    showToast("Failed to delete: " + err.message, "error");
+    showItemToast("Failed to delete: " + err.message, "error");
     if (btn) { btn.disabled = false; btn.textContent = originalText; }
   }
 }
@@ -194,7 +188,7 @@ if (form) {
     const price       = Number(priceInput?.value || 0);
 
     if (!name || !price) {
-      showToast("Item name and price are required.", "error");
+      showItemToast("Item name and price are required.", "error");
       return;
     }
 
@@ -225,9 +219,9 @@ if (form) {
       renderItems();
 
       form.reset();
-      showToast("Item saved successfully ✓");
+      showItemToast("Item saved successfully ✓");
     } catch (err) {
-      showToast(err.message || "Failed to save item.", "error");
+      showItemToast(err.message || "Failed to save item.", "error");
     } finally {
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText; }
     }
@@ -235,6 +229,4 @@ if (form) {
 }
 
 /* ---------- INIT ---------- */
-document.addEventListener("DOMContentLoaded", () => {
-  loadItems();
-});
+loadItems();
