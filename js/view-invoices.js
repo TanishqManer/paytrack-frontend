@@ -83,7 +83,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     /* QR image via Google Charts */
     const qrUrl = upiLink
-      ? `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(upiLink)}&choe=UTF-8`
+      ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiLink)}&margin=10`
       : null;
 
     const modal = document.createElement("div");

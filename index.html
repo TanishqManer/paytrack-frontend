@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script>
+    /* If already logged in, skip landing page and go to dashboard */
+    if (localStorage.getItem("paytrack_token")) {
+      window.location.replace("dashboard-v2.html");
+    }
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>PayTrack | Smart Invoice & Billing System</title>
