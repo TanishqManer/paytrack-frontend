@@ -543,8 +543,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     const subtotal  = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
     const gstAmount = subtotal * (invoiceSettings.gstPercent / 100);
     const total     = subtotal + gstAmount;
+    const currency  = invoiceSettings.currency || "₹";
+    const gstPct    = invoiceSettings.gstPercent || 0;
 
-    if (totalAmount) totalAmount.textContent = `${invoiceSettings.currency}${total.toFixed(2)}`;
+    if (totalAmount) totalAmount.textContent = `${currency}${total.toFixed(2)}`;
+
+    /* Update summary panel */
+    const subtotalDisplay = document.getElementById("subtotalDisplay");
+    const gstDisplay      = document.getElementById("gstDisplay");
+    const totalDisplay    = document.getElementById("totalDisplay");
+    const gstRow          = document.getElementById("gstRow");
+    const cartBadge       = document.getElementById("cartBadge");
+
+    if (subtotalDisplay) subtotalDisplay.textContent = `${currency}${subtotal.toFixed(2)}`;
+    if (gstDisplay)      gstDisplay.textContent      = `${currency}${gstAmount.toFixed(2)}`;
+    if (totalDisplay)    totalDisplay.textContent     = `${currency}${total.toFixed(2)}`;
+    if (gstRow) {
+      const label = gstRow.querySelector("span");
+      if (label) label.textContent = `GST (${gstPct}%)`;
+      gstRow.style.display = gstPct > 0 ? "" : "none";
+    }
+    if (cartBadge) cartBadge.textContent = cart.reduce((s, i) => s + i.qty, 0);
+
     return { subtotal, gstAmount, total };
   }
 
