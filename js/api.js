@@ -222,8 +222,8 @@ const Payments = {
   verify(data) {
     return apiFetch("/payments/verify", { method: "POST", body: data });
   },
-  sendInvoice(invoiceId, pdfBase64 = null) {
-    return apiFetch("/payments/send-invoice", { method: "POST", body: { invoiceId, pdfBase64 } });
+  sendInvoice(invoiceId) {
+    return apiFetch("/payments/send-invoice", { method: "POST", body: { invoiceId } });
   },
 };
 

@@ -582,12 +582,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     btn.textContent     = "Sending…";
 
     try {
-      showToast("Generating PDF…", "info");
-      const pdfBase64 = await downloadPDF(invoice);
-
+      /* Send just the invoiceId — backend builds the email from stored data.
+         Never send pdfBase64 over the wire (causes Vercel timeout). */
       const invoiceDisplayId = invoice.invoiceId || invoice.id;
-      const res = await Payments.sendInvoice(invoiceDisplayId, pdfBase64 || null);
-      if (!res.success) throw new Error(res.message);
+      const res = await Payments.sendInvoice(invoiceDisplayId, null);
+      if (!res || !res.success) throw new Error(res?.message || "Send failed");
 
       showToast(`Invoice emailed to ${invoice.clientEmail} ✓`);
       await loadInvoices();
