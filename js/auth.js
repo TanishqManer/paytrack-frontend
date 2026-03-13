@@ -291,14 +291,9 @@ if (registerForm) {
       if (btn) setLoading(btn, false, origText);
 
       /* Step 2: Show OTP overlay */
+      /* verifyOtp already creates the user + saves token — just redirect */
       showOtpOverlay(email, name, async () => {
-        /* Step 3: OTP verified — now register with password */
-        try {
-          await window.PayTrackAPI.Auth.register(name, email, password);
-          window.location.href = "dashboard-v2.html";
-        } catch (err) {
-          showAuthToast(err.message || "Registration failed.");
-        }
+        window.location.href = "dashboard-v2.html";
       });
 
     } catch (err) {
