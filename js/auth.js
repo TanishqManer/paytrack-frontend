@@ -57,7 +57,7 @@ function setLoading(btn, loading, originalText) {
 /* ============================================================
    OTP OVERLAY — shown after register form submit
    ============================================================ */
-function showOtpOverlay(email, name, onVerified) {
+function showOtpOverlay(email, name, onVerified, password = "") {
   /* Remove any existing overlay */
   document.getElementById("otpOverlay")?.remove();
 
@@ -191,7 +191,7 @@ function showOtpOverlay(email, name, onVerified) {
     errorEl.textContent   = "";
 
     try {
-      const data = await window.PayTrackAPI.Auth.verifyOtp(email, otp, name);
+      const data = await window.PayTrackAPI.Auth.verifyOtp(email, otp, name, password);
       overlay.remove();
       onVerified(data);
     } catch (err) {
@@ -225,7 +225,7 @@ function showOtpOverlay(email, name, onVerified) {
 }
 
 /* ============================================================
-   LOGIN FORM
+   LOGIN FORM — email + password
    ============================================================ */
 const loginForm = document.getElementById("loginForm");
 if (loginForm) {
@@ -235,7 +235,7 @@ if (loginForm) {
     const email    = document.getElementById("email")?.value.trim()    || "";
     const password = document.getElementById("password")?.value.trim() || "";
     const btn      = loginForm.querySelector("button[type='submit']")
-                  || loginForm.querySelector(".btn-primary")
+                  || loginForm.querySelector(".login-btn")
                   || loginForm.querySelector("button");
 
     if (!email || !password) {
@@ -248,7 +248,6 @@ if (loginForm) {
 
     try {
       await window.PayTrackAPI.Auth.login(email, password);
-      window.location.href = "dashboard-v2.html";
     } catch (err) {
       showAuthToast(err.message || "Login failed. Please try again.");
       if (btn) setLoading(btn, false, origText);
@@ -290,11 +289,10 @@ if (registerForm) {
       await window.PayTrackAPI.Auth.requestOtp(email, name);
       if (btn) setLoading(btn, false, origText);
 
-      /* Step 2: Show OTP overlay */
-      /* verifyOtp already creates the user + saves token — just redirect */
+      /* Step 2: Show OTP overlay — pass password so backend saves it */
       showOtpOverlay(email, name, async () => {
         window.location.href = "dashboard-v2.html";
-      });
+      }, password);
 
     } catch (err) {
       showAuthToast(err.message || "Failed to send OTP. Please try again.");

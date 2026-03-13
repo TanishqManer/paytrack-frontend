@@ -99,10 +99,10 @@ const Auth = {
     });
   },
 
-  async verifyOtp(email, otp, name) {
+  async verifyOtp(email, otp, name, password = "") {
     const data = await apiFetch("/auth/otp/verify", {
       method: "POST",
-      body:   { email, otp, name: name || "" },
+      body:   { email, otp, name: name || "", password: password || "" },
     });
     if (data.token) {
       saveToken(data.token);
