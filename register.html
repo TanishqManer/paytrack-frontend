@@ -519,8 +519,10 @@
     </div>
   </div>
 
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
   <script>
-    /* ---- Password Strength ---- */
+    /* ---- Password Strength (kept from original) ---- */
     const passwordInput = document.getElementById("password");
     const bars = [
       document.getElementById("bar1"),
@@ -557,58 +559,6 @@
       strengthLabel.textContent = val.length > 0 ? labels[score] : "";
       strengthLabel.style.color = val.length > 0 ? colors[score] : "";
     });
-
-    /* ---- Register Form ---- */
-    const form       = document.getElementById("registerForm");
-    const registerBtn = document.getElementById("registerBtn");
-    const errorMsg   = document.getElementById("errorMsg");
-
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-
-      const name            = document.getElementById("name").value.trim();
-      const email           = document.getElementById("email").value.trim();
-      const password        = document.getElementById("password").value.trim();
-      const confirmPassword = document.getElementById("confirmPassword").value.trim();
-
-      errorMsg.classList.remove("show");
-
-      if (!name || !email || !password || !confirmPassword) {
-        errorMsg.textContent = "Please fill in all fields.";
-        errorMsg.classList.add("show");
-        return;
-      }
-
-      if (password !== confirmPassword) {
-        errorMsg.textContent = "Passwords do not match.";
-        errorMsg.classList.add("show");
-        return;
-      }
-
-      if (password.length < 6) {
-        errorMsg.textContent = "Password must be at least 6 characters.";
-        errorMsg.classList.add("show");
-        return;
-      }
-
-      // Loading state
-      registerBtn.textContent = "Creating account...";
-      registerBtn.classList.add("loading");
-
-      setTimeout(() => {
-        // Backend integration placeholder
-        console.log("REGISTER DATA", { name, email, password });
-
-        localStorage.setItem("paytrack_token", "dummy-jwt-token");
-        localStorage.setItem("paytrack_user", email);
-
-        window.location.href = "dashboard-v2.html";
-      }, 800);
-    });
   </script>
-
-
-  <script src="js/api.js"></script>
-  <script src="js/auth.js"></script>
 </body>
 </html>
