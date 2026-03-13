@@ -9,6 +9,13 @@ document.addEventListener("DOMContentLoaded", async () => {
      - All original UI logic preserved
      ============================================================ */
 
+  /* ---------- CLEAR BLOATED LOCALSTORAGE ---------- */
+  try {
+    const inv = JSON.parse(localStorage.getItem("paytrack_invoices") || "[]");
+    const clean = inv.map(({ pdfBase64, ...rest }) => rest); /* strip any stored PDFs */
+    localStorage.setItem("paytrack_invoices", JSON.stringify(clean));
+  } catch (_) { localStorage.removeItem("paytrack_invoices"); }
+
   /* ---------- AUTH GUARD ---------- */
   if (!window.PayTrackAPI.Auth.isLoggedIn()) {
     window.location.href = "login.html";
@@ -648,10 +655,10 @@ document.addEventListener("DOMContentLoaded", async () => {
           } catch (_) { /* non-critical */ }
         }
 
-        /* Keep localStorage in sync for dashboard + other pages */
+        /* Keep localStorage in sync for dashboard + other pages (no PDF blob) */
         const cached = JSON.parse(localStorage.getItem("paytrack_invoices") || "[]");
-        cached.unshift({ ...invoiceForPdf, pdfBase64 });
-        localStorage.setItem("paytrack_invoices", JSON.stringify(cached));
+        cached.unshift({ ...invoiceForPdf }); /* never store pdfBase64 in localStorage */
+        try { localStorage.setItem("paytrack_invoices", JSON.stringify(cached)); } catch (_) {}
 
         /* ── Reset UI ── */
         createInvoiceBtn.textContent = "✦ Create Invoice";
